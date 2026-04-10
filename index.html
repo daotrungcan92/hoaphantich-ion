@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Hóa Phân Tích – Anion & Cation</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#222;padding:18px;text-align:center;}
+  h1{color:#0077cc;margin:6px 0 12px;}
+  h2{font-size:18px;margin:8px 0;}
+  p.note{color:#666;font-size:14px;margin:6px 0 12px;}
+  button{background:#fff;border:1px solid #ccc;border-radius:10px;padding:12px 14px;margin:8px auto;cursor:pointer;font-size:16px;width:86%;max-width:420px;display:block;transition:.18s}
+  button:hover{background:#eaf6ff}
+  .neutral{background:#fff}
+  .positive{background:#c6f6d5;color:#065f46;border-color:#34d399}
+  .negative{background:#fed7d7;color:#742a2a;border-color:#fb7185}
+  .disabled{background:#f0f0f0;color:#999;border-color:#ddd;cursor:not-allowed}
+  .small{width:46%;display:inline-block}
+  .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  #mainArea,#anionArea,#cationArea,#summary{margin-top:14px}
+  .chip{display:inline-block;padding:6px 10px;border-radius:14px;border:1px solid #ddd;margin:4px;background:#fff}
+  .footer{font-size:13px;color:#666;margin-top:16px}
+  @media (max-width:420px){button{width:92%}.small{width:45%}}
+</style>
+</head>
+<body>
+
+<h1>💧 Hóa Phân Tích – Xác Định Ion</h1>
+
+<div id="mainArea">
+  <button id="btnAnion" class="neutral" onclick="openAnion()">🔍 Bắt đầu - Tìm Anion</button>
+  <button id="btnCation" class="disabled" onclick="openCation()">🔎 Bắt đầu - Tìm Cation</button>
+  <div class="note">Làm xong phần Anion rồi chọn "Tìm Cation". Mẫu giả định chứa tối đa 3 ion (cation + anion tổng cộng).</div>
+</div>
+
+<!-- ANION AREA -->
+<div id="anionArea" style="display:none"></div>
+
+<!-- CATION AREA -->
+<div id="cationArea" style="display:none"></div>
+
+<!-- SUMMARY -->
+<div id="summary" style="margin-top:18px"></div>
+
+<div class="footer">Giao diện nút đơn giản — phù hợp điện thoại. Có thể mở rộng hoặc lưu kết quả.</div>
+
+<script>
+/* ---------------- State ---------------- */
+let anionResults = {};
+let cationResults = [];
+let currentBranch = null;
+let currentTestList = [];
+const MAX_TOTAL_IONS = 3;
+const incompatiblePairs = [
+
+  // Halide
+  { anion: "Cl⁻", cation: "Ag+" },
+  { anion: "Cl⁻", cation: "Pb2+" },
+  { anion: "Br⁻ / I⁻", cation: "Ag+" },
+  { anion: "Br⁻ / I⁻", cation: "Pb2+" },
+
+  // Sulfate
+  { anion: "SO₄²⁻", cation: "Ba2+" },
+  { anion: "SO₄²⁻", cation: "Pb2+" },
+  { anion: "SO₄²⁻", cation: "Ca2+" },
+
+  // Carbonate / bicarbonate
+  { anion: "CO₃²⁻ / HCO₃⁻", cation: "Ba2+" },
+  { anion: "CO₃²⁻ / HCO₃⁻", cation: "Ca2+" },
+  { anion: "CO₃²⁻ / HCO₃⁻", cation: "Mg2+" },
+  { anion: "CO₃²⁻ / HCO₃⁻", cation: "Pb2+" },
+  { anion: "CO₃²⁻ / HCO₃⁻", cation: "Ag+" },
+
+  // Oxalate
+  { anion: "C₂O₄²⁻", cation: "Ca2+" },
+  { anion: "C₂O₄²⁻", cation: "Ba2+" },
+  { anion: "C₂O₄²⁻", cation: "Pb2+" },
+
+  // SCN
+  { anion: "SCN⁻", cation: "Ag+" },
+  { anion: "SCN⁻", cation: "Hg2+" }
+
+];
+function isIncompatible(newCation){
+
+  for(const pair of incompatiblePairs){
+
+    if(pair.cation !== newCation) continue;
+
+    // ❗ Trường hợp đặc biệt: CO3 / HCO3
+    if(pair.anion === "CO₃²⁻ / HCO₃⁻"){
+
+      const detail = anionResults["CO₃²⁻ / HCO₃⁻ (detail)"];
+
+      // 👉 chỉ chặn nếu là CO3
+      if(detail === "CO₃²⁻"){
+        return pair;
+      }
+
+      // 👉 nếu là HCO3 thì cho qua
+      continue;
+    }
+
+    // ❗ Các anion bình thường
+    if(anionResults[pair.anion] === true){
+      return pair;
+    }
+  }
+
+  return null;
+}
+function getTotalIons(){
+  return Object.entries(anionResults)
+    .filter(([k,v]) => v === true && !k.includes('(detail)'))
+    .length + cationResults.length;
+}
+
+function getAnionCount(){
+  return Object.entries(anionResults)
+    .filter(([k,v]) => v === true && !k.includes('(detail)'))
+    .length;
+}
+
+/* ---------------- Utilities ---------------- */
+function idFor(s){ return 'btn_'+s.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+function updateSummary(){
+  const s=document.getElementById('summary');
+  let html='<h2>📋 Tóm tắt tiến trình</h2>';
+  html+='<div><strong>Anion:</strong> ';
+  if(Object.keys(anionResults).length===0) html+='<span class="chip">— chưa làm —</span>';
+  else for(const k of Object.keys(anionResults)){
+
+  // ❗ bỏ detail riêng
+  if(k.includes('(detail)')) continue;
+
+  // ❗ chỉ lấy DƯƠNG
+  if(anionResults[k] !== true) continue;
+
+  // 👉 lấy detail nếu có (CO3 / HCO3)
+  const detail = anionResults[k + ' (detail)'];
+  const text = detail || k;
+
+  html += `<span class="chip positive">${text}</span>`;
+}
+  html+='</div><div style="margin-top:8px"><strong>Cation:</strong> ';
+  if(cationResults.length===0) html+='<span class="chip">— chưa làm —</span>';
+  else cationResults.forEach(c=>html+=`<span class="chip positive">${c}</span>`);
+  const total = Object.entries(anionResults)
+  .filter(([k,v]) => v === true && !k.includes('(detail)'))
+  .length + cationResults.length;
+  html+=`</div><div class="note">Tổng ion đã xác định: ${total}/${MAX_TOTAL_IONS}</div>`;
+  s.innerHTML=html;
+  const btnC=document.getElementById('btnCation');
+  btnC.classList.toggle('disabled',Object.keys(anionResults).length===0);
+  btnC.disabled=(Object.keys(anionResults).length===0);
+}
+
+/* ---------------- Main navigation ---------------- */
+function openAnion(){
+  document.getElementById('anionArea').style.display='block';
+  document.getElementById('cationArea').style.display='none';
+  renderAnionStart();
+  document.getElementById('btnAnion').classList.add('positive');
+  updateSummary();
+}
+
+function openCation(){
+  if(Object.keys(anionResults).length===0){alert('Vui lòng thực hiện phần Anion trước.');return;}
+  document.getElementById('anionArea').style.display='none';
+  document.getElementById('cationArea').style.display='block';
+  renderCationStart();
+  document.getElementById('btnCation').classList.add('positive');
+  updateSummary();
+}
+
+/* ---------------- ANION ---------------- */
+const anionArea=document.getElementById('anionArea');
+
+function renderAnionStart(){
+  currentBranch=null;currentTestList=[];
+  anionArea.innerHTML=`
+    <h2>💧 Xác định Anion</h2>
+    <p class="note">Bước 1: Thêm từng giọt AgNO₃ vào dung dịch gốc. Quan sát tủa?</p>
+    <button onclick="anion_noPrecip()">❌ Không có tủa → Nhánh A</button>
+    <button onclick="anion_hasPrecip()">⚗️ Có tủa → Kiểm tra tiếp với HNO₃</button>
+    <div style="margin-top:10px"><button onclick="closeAnion()">🔙 Quay lại chính</button></div>`;
+}
+
+function closeAnion(){anionArea.style.display='none';updateSummary();}
+
+/* Branches */
+function anion_noPrecip(){currentBranch='A';currentTestList=["SO₄²⁻","CH₃COO⁻","NO₂⁻","NO₃⁻"];renderAnionList();}
+function anion_hasPrecip(){
+  anionArea.innerHTML=`
+  <h2>⚗️ Ly tâm, tách tủa rồi hòa tan bằng HNO₃ đậm đặc</h2>
+  <button onclick="anion_precip_dissolve()">💧 Tủa TAN → Nhánh B</button>
+  <button onclick="anion_precip_notdissolve()">⚗️ Tủa KHÔNG TAN → Nhánh C</button>
+  <div style="margin-top:10px"><button onclick="renderAnionStart()">🔙 Quay lại</button></div>`;
+}
+function anion_precip_dissolve(){currentBranch='B';currentTestList=["CO₃²⁻ / HCO₃⁻","C₂O₄²⁻","SO₄²⁻","CH₃COO⁻","NO₂⁻","NO₃⁻"];renderAnionList();}
+function anion_precip_notdissolve(){currentBranch='C';currentTestList=["SCN⁻","Br⁻ / I⁻","Cl⁻","CO₃²⁻ / HCO₃⁻","C₂O₄²⁻","SO₄²⁻","CH₃COO⁻","NO₂⁻","NO₃⁻"];renderAnionList();}
+
+/* Render test list (no heading A/B/C) */
+function renderAnionList(){
+  let html=`<p class="note">Chọn phép thử cần thực hiện:</p>`;
+  currentTestList.forEach(t=>{
+    const cls=anionResults[t]===true?'positive':anionResults[t]===false?'negative':'neutral';
+    let dis=false;let note='';
+    if(t==="NO₃⁻"){
+      if(anionResults["NO₂⁻"]===true){dis=true;note='<div class="note">⚠️ Không cần thử NO₃⁻ (NO₂⁻ dương).</div>';}
+      else if(anionResults["NO₂⁻"]!==false){dis=true;note='<div class="note">🔒 NO₃⁻ mở khi NO₂⁻ âm.</div>';}
+    }
+    html+=`<button class="${cls} ${dis?'disabled':''}" ${dis?'disabled':''} onclick="${dis?'':`openAnionTest('${t}')`}">${t}</button>${note}`;
+  });
+  html+=`<div style="margin-top:10px"><button onclick="renderAnionStart()">🔙 Quay lại đầu</button> <button onclick="resetAnionConfirm()">🔁 Reset</button></div>`;
+  anionArea.innerHTML=html;
+  updateSummary();
+}
+
+/* Open test detail */
+function openAnionTest(name){
+  let html=`<h2>Phép thử: ${name}</h2>`;
+  const backBtn=`<div style="margin-top:8px"><button onclick="renderAnionList()">🔙 Quay lại danh sách phép thử</button></div>`;
+  switch(name){
+    case "SO₄²⁻":
+      html+=`<p class="note">Lấy dd gốc thêm 1 giọt Ba(NO₃)₂. Có tủa?</p>
+      <button onclick="so4_step()">⚗️ Có tủa</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không tủa</button>${backBtn}`;break;
+    case "NO₂⁻":
+      html+=`<p class="note">Lấy dd gốc thêm HCl loãng + Griess A, làm lạnh 5'. Sau đó thêm Griess B và NaOH</p>
+      <button onclick="recordAnion('${name}',true)">🌈 Màu cam</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không màu</button>${backBtn}`;break;
+    case "NO₃⁻":
+      if(anionResults["NO₂⁻"]===true){html+=`<p class="note">⚠️ Bỏ qua NO₃⁻ (NO₂⁻ dương).</p>${backBtn}`;}
+      else{html+=`<p class="note">Lấy dd gốc thêm 4 hạt kẽm + HCl đậm đặc + Griess A, làm lạnh 5'. Sau đó thêm Griess B và NaOH</p>
+      <button onclick="recordAnion('${name}',true)">🌈 Màu cam</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không màu</button>${backBtn}`;}
+      break;
+    case "CH₃COO⁻":
+      html+=`<p class="note">Lấy dd gốc thêm cồn 90° + H₂SO₄ đậm đặc, đậy bông ướt, đun 1-2 phút. Sau đó ngửi bông.</p>
+      <button onclick="recordAnion('${name}',true)">👃 Mùi este (dầu chuối)</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không mùi</button>${backBtn}`;break;
+    case "CO₃²⁻ / HCO₃⁻":
+      html+=`<p class="note">Lấy dd gốc thêm HCl: có sủi bọt?</p>
+      <button onclick="co3_step()">💨 Có sủi bọt</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không khí</button>${backBtn}`;break;
+    case "C₂O₄²⁻":
+      html+=`<p class="note">Lấy dd gốc thêm Ca(CH₃COO)₂ → nếu tủa, thêm CH₃COOH.</p>
+      <button onclick="recordAnion('${name}',true)">⚗️ Tủa bền</button>
+      <button onclick="recordAnion('${name}',false)">💧 Tủa tan</button>${backBtn}`;break;
+    case "SCN⁻":
+      html+=`<p class="note">Lấy dd gốc thêm FeCl₃ → đỏ máu?</p>
+      <button onclick="recordAnion('${name}',true)">🌈 Đỏ máu</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không có đỏ máu</button>${backBtn}`;break;
+    case "Br⁻ / I⁻":
+      html+=`<p class="note">Lấy dd gốc thêm Javen + cloroform + H₂SO₄ → lắc mạnh. Quan sát.</p>
+      <button onclick="recordAnion('${name}',true)">🌈 Có màu vàng hoặc tím</button>
+      <button onclick="recordAnion('${name}',false)">❌ Không có màu</button>${backBtn}`;break;
+    case "Cl⁻":
+      html+=`<p class="note">Lấy dd gốc thêm 1 giọt AgNO₃</p>
+      <button onclick="cl_step()">⚗️ Có tủa</button>${backBtn}`;break;
+  }
+  anionArea.innerHTML=html;
+}
+
+/* Sub steps */
+function so4_step(){
+  anionArea.innerHTML=`<h2>🧪 SO₄²⁻ — Bước 2</h2>
+  <p class="note">Thêm từng giọt HCl loãng vào tủa: tủa tan không?</p>
+  <button onclick="recordAnion('SO₄²⁻',true)">⚗️ Không tan → Dương</button>
+  <button onclick="recordAnion('SO₄²⁻',false)">💧 Tan → Âm</button>
+  <div style="margin-top:8px"><button onclick="renderAnionList()">🔙 Quay lại danh sách phép thử</button></div>`;
+}
+
+function co3_step(){
+  anionArea.innerHTML=`<h2>💨 CO₃/HCO₃ — Bước 2</h2>
+  <p class="note">Lấy dd gốc thêm Mg(NO₃)₂: có tủa?</p>
+  <button onclick="recordAnion('CO₃²⁻ / HCO₃⁻',true,'CO₃²⁻')">⚗️ Có tủa → CO₃²⁻</button>
+  <button onclick="recordAnion('CO₃²⁻ / HCO₃⁻',true,'HCO₃⁻')">💧 Không tủa → HCO₃⁻</button>
+  <div style="margin-top:8px"><button onclick="renderAnionList()">🔙 Quay lại danh sách phép thử</button></div>`;
+}
+
+function cl_step(){
+  anionArea.innerHTML=`<h2>🧪 Cl⁻</h2>
+  <p class="note">Thêm NH₄OH đậm đặt quan sát tủa có tan không? Nếu tủa tan tiếp tục cho HNO₃ đậm đặt vào</p>
+  <button onclick="recordAnion('Cl⁻',true)">✅ Tủa tan rồi xuất hiện lại</button>
+  <button onclick="recordAnion('Cl⁻',false)">❌ Không đúng hiện tượng trên</button>
+  <div style="margin-top:8px"><button onclick="renderAnionList()">🔙 Quay lại danh sách phép thử</button></div>`;
+}
+
+/* Record anion result & return to list */
+function recordAnion(name,positive,extra){
+
+  // 🚨 Chỉ chặn khi chọn DƯƠNG
+  if(positive){
+
+    // ❗ Chặn tổng ion
+    if(getTotalIons() >= MAX_TOTAL_IONS){
+      alert('⚠️ Đã đạt tối đa 3 ion!');
+      return;
+    }
+
+    // ❗ Chặn số anion (tối đa 2)
+    if(getAnionCount() >= 2){
+      alert('⚠️ Tối đa chỉ có 2 anion trong mẫu!');
+      return;
+    }
+  }
+
+  anionResults[name]=!!positive;
+  if(extra) anionResults[name+' (detail)']=extra;
+
+  alert(`${name}: ${positive?'DƯƠNG':'ÂM'}${extra?' – '+extra:''}`);
+  renderAnionList();
+  updateSummary();
+}
+
+/* Reset */
+function resetAnionConfirm(){if(confirm('Xóa tất cả kết quả Anion?')){anionResults={};renderAnionStart();updateSummary();}}
+
+/* ---------------- CATION ---------------- */
+const cationArea=document.getElementById('cationArea');
+
+function renderCationStart(){
+  cationArea.innerHTML=`
+    <h2>🔎 Xác định Cation (Nhóm I → VI)</h2>
+    <p class="note">Bắt đầu tìm các nhóm cation theo trình tự logic.</p>
+    <button onclick="cationGroup1()">Bắt đầu Nhóm I</button>
+    <div style="margin-top:8px"><button onclick="closeCation()">🔙 Quay lại chính</button></div>`;
+  updateSummary();
+}
+
+function closeCation(){cationArea.style.display='none';updateSummary();}
+
+/* === Nhóm I === */
+function cationGroup1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm I (Ag⁺, Pb²⁺)</h2>
+  <p class="note">Thêm 1 giọt HCl 6M vào dd gốc. Có tủa không?</p>
+  <button onclick="cation1_step2(true)">⚗️ Có tủa</button>
+  <button onclick="cationGroup2_0()">❌ Không tủa → Nhóm II-0</button>`;
+}
+
+function cation1_step2(hasPpt){
+  if(!hasPpt)return;
+  cationArea.innerHTML=`
+  <h2>Nhóm I – Bước 2</h2>
+  <p class="note">Thêm nhiều nước, lắc mạnh, đun nhẹ. Tủa tan không?</p>
+  <button onclick="cation1_pb()">💧 Tủa tan → Pb²⁺</button>
+  <button onclick="cation1_ag()">⚗️ Tủa không tan → Ag⁺</button>`;
+}
+
+function cation1_pb(){
+  recordCation('Pb2+');
+  cationGroup2_1(); // Sang nhóm II-1 sau khi xác định Pb²⁺
+}
+
+function cation1_ag(){
+  recordCation('Ag+');
+  cationGroup2_1(); // Sang nhóm II-1 sau khi xác định Ag⁺
+}
+/* === Nhóm II-0 === */
+function cationGroup2_0(){
+  cationArea.innerHTML=`
+  <h2>Nhóm II-0 (Ba²⁺, Ca²⁺)</h2>
+  <p class="note">Thêm tiếp 1 giọt H₂SO₄ 2N. Có tủa không?</p>
+  <button onclick="cation2_ba()">⚗️ Có kết tủa ngay → Ba²⁺</button>
+  <button onclick="cation2_step2_0()">❌ Không tủa hoặc tủa chậm → Bước 2</button>`;
+}
+
+/* Khi có tủa — xác định Ba2+ và chuyển sang nhóm III-Ba */
+function cation2_ba(){
+  recordCation('Ba2+');
+  cationGroup3_Ba(); // chuyển sang nhóm III-Ba
+}
+
+/* Bước 2 nhóm II-0 */
+function cation2_step2_0(){
+  cationArea.innerHTML=`
+  <h2>Nhóm II-0 — Bước 2</h2>
+  <p class="note">Tiếp tục thêm 5 giọt H₂SO₄ 2N và 5 giọt cồn 90°. Có tủa không?</p>
+  <button onclick="cation2_step3_0()">⚗️ Có tủa → Bước 3</button>
+  <button onclick="cationGroup3_0()">❌ Không tủa → Không có nhóm II → Nhóm III-0</button>`;
+}
+
+/* Bước 3 nhóm II-0 */
+function cation2_step3_0(){
+  cationArea.innerHTML=`
+  <h2>Nhóm II-0 — Bước 3</h2>
+  <p class="note">Thêm KI vào dd gốc: có hiện tượng gì?</p>
+  <button onclick="recordCation('Bi3+');cationGroup3_0()">🖤 Màu đen → cam → Bi³⁺ (không có nhóm II)</button>
+  <button onclick="recordCation('Ca2+');cationGroup3_Ca()">💧 Không màu đen → Ca²⁺</button>`;
+}/* === Nhóm II-1 === */
+function cationGroup2_1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm II-1 (Ba²⁺, Ca²⁺)</h2>
+  <p class="note">Lấy dd gốc (nửa đốt ngón tay) thêm nhiều HCl 6M, li tâm bỏ tủa, lấy phần dd thử lại HCl 6M xem còn tủa không?</p>
+  <p class="note">Nếu đã hết tủa thì thêm 1 giọt H₂SO₄ 2N. Quan sát có tủa không?</p>
+  <button onclick="recordCation('Ba2+');showFinalSummary()">⚗️ Có tủa → Ba²⁺</button>
+  <button onclick="cation2_step2_1()">❌ Không tủa → Bước 2</button>`;
+}
+
+function cation2_step2_1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm II-1 — Bước 2</h2>
+  <p class="note">Tiếp tục thêm 5 giọt H₂SO₄ 2N và 5 giọt cồn 90°. Có tủa không?</p>
+  <button onclick="cation2_step3_1()">⚗️ Có tủa → Bước 3</button>
+  <button onclick="cationGroup3_1()">❌ Không tủa → Không có nhóm II → Nhóm III-1</button>`;
+}
+
+function cation2_step3_1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm II-1 — Bước 3</h2>
+  <p class="note">Thêm KI vào dd gốc: có hiện tượng gì?</p>
+  <button onclick="recordCation('Bi3+');showFinalSummary()">🖤 Màu đen → cam → Bi³⁺</button>
+  <button onclick="recordCation('Ca2+');showFinalSummary()">💧 Không màu đen → Ca²⁺</button>`;
+}
+
+/* === Nhóm III-0 === */
+function cationGroup3_0(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-0 (Al³⁺, Zn²⁺)</h2>
+  <p class="note">Thêm từ từ NaOH vào dung dịch gốc (nửa đốt ngót tay) đến 1/3 ống:</p>
+  <button onclick="cation3_step2_0()">⚗️ Tủa xuất hiện rồi tan → Nhóm III</button>
+  <button onclick="cation3_afterPrecip()">⚠️ Tủa bền → Ly tâm tách tủa</button>
+  <button onclick="cationGroup6()">❌ Không tủa → Sang nhóm VI</button>`;
+}
+
+function cation3_afterPrecip(){
+  cationArea.innerHTML=`
+  <h2>🧪 Xử lý sau khi có tủa bền</h2>
+  <p class="note">
+    Ly tâm tách tủa (nhóm IV/V). 
+    Lấy phần dung dịch trong để tiếp tục xét nhóm III.
+  </p>
+
+  <button onclick="cation3_step2_1()">🔎 Xét lại nhóm III (Al³⁺, Zn²⁺)</button>
+  <button onclick="cationGroup4_0()">➡️ Xét tủa nhóm IV/V</button>
+  `;
+}
+
+function cation3_step2_0(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-0 — Bước 2</h2>
+  <p class="note">Chia dd ra 2 ống nghiệm, thêm nhiều NH₄Cl bão hòa vào 1 ống:</p>
+<p class="note">So sánh độ đục của 2 ống</p>
+  <button onclick="recordCation('Al3+');cationGroup6()">💧 Ống có thêm NH₄Cl đục hơn → Al³⁺</button>
+  <button onclick="recordCation('Zn2+');cationGroup6()">⚗️ 2 ống gần như nhau → Zn²⁺</button>`;
+}
+
+/* === Nhóm III-1 === */
+function cationGroup3_1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-1 (Al³⁺, Zn²⁺)</h2>
+  <p class="note">Lấy dd gốc (nửa đốt ngón tay) thêm nhiều HCl 6M, li tâm bỏ tủa, lấy phần dd (nửa đốt ngón tay)</p>
+<p class="note">Thử lại vài giọt HCl 6M xem còn tủa không?</p>
+<p class="note">Nếu đã hết tủa thêm từ từ NaOH đến 1/3 ống và quan sát:</p>
+  <button onclick="cation3_step2_1()">⚗️ Tủa xuất hiện rồi tan → Nhóm III</button>
+  <button onclick="cationGroup4_1()">⚠️ Tủa bền → Nhóm IV/V</button>
+  <button onclick="cationGroup6()">❌ Không tủa → Sang nhóm VI</button>`;
+}
+
+function cation3_step2_1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-1 — Bước 2</h2>
+  <p class="note">Chia dd ra 2 ống nghiệm, thêm nhiều NH₄Cl bão hòa vào 1 ống:</p>
+<p class="note">So sánh độ đục của 2 ống</p>
+  <button onclick="afterAl_Group3_1()">
+💧 Ống có thêm NH₄Cl đục hơn → Al³⁺
+</button>
+  <button onclick="cation3_handleZn()">⚗️ 2 ống gần như nhau → Zn²⁺</button>`;
+}
+
+function afterAl_Group3_1(){
+
+  // 1. Ghi nhận Al3+
+  recordCation('Al3+');
+
+  // 2. Nếu đủ ion → kết thúc
+  if(getTotalIons() >= MAX_TOTAL_IONS){
+    showFinalSummary();
+    return;
+  }
+
+  // 3. Nếu chưa đủ → quay lại xét nhóm IV/V
+  cationArea.innerHTML = `
+    <h2>🔁 Tiếp tục phân tích</h2>
+    <p class="note">
+      Đã xác định Al³⁺. Tiếp tục xét phần tủa (nhóm IV/V).
+    </p>
+
+    <button onclick="cationGroup4_1()">➡️ Xét nhóm IV/V</button>
+  `;
+}
+
+function cation3_handleZn(){
+
+  // nếu đã có cation trước đó (ví dụ Pb2+)
+  if(cationResults.length > 0){
+    recordCation('Zn2+');
+    afterZnCheck();
+    return;
+  }
+
+  // nếu chưa chắc → test Monterqui
+  cation3_testZn();
+}
+
+function cation3_testZn(){
+  cationArea.innerHTML=`
+  <h2>🧪 Kiểm tra Zn²⁺ (Monterqui)</h2>
+  <p class="note">
+    Lấy dung dịch gốc làm phản ứng Monterqui.
+    Quan sát màu:
+  </p>
+
+  <button onclick="yesZn()">💜 Xuất hiện màu tím xim → Zn²⁺</button>
+<button onclick="noZn()">❌ Không xuất hiện màu → Không có Zn²⁺</button>
+  `;
+}
+
+function yesZn(){
+  recordCation('Zn2+');
+  afterZnCheck();
+}
+
+function noZn(){
+  alert('Không có Zn²⁺');
+  afterZnCheck();
+}
+
+function afterZnCheck(){
+
+  // nếu đã đủ ion → kết thúc
+  if(getTotalIons() >= MAX_TOTAL_IONS){
+    showFinalSummary();
+    return;
+  }
+
+  // nếu chưa đủ → quay lại xét tủa IV/V
+  cationArea.innerHTML=`
+    <h2>🔁 Tiếp tục xét nhóm IV/V</h2>
+    <p class="note">
+      Sau khi đã xử lý dung dịch (nhóm III),
+      quay lại phần tủa để xác định nhóm IV/V.
+    </p>
+
+    <button onclick="cationGroup4_0()">➡️ Xét nhóm IV/V</button>
+  `;
+}
+
+/* === Nhóm III-Ba === */
+function cationGroup3_Ba(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-Ba</h2>
+  <p class="note">Lấy dd gốc thêm nhiều H₂SO₄ 2N, li tâm bỏ tủa, lấy phần dd trong (nửa đốt ngón tay)</p>
+<p class="note">Thử lại bằng vài giọt H₂SO₄ xem còn tủa không?</p>
+<p class="note">Nếu đã hết tủa thì thêm từ từ NaOH vào đến 1/3 ống và quan sát:</p>
+  <button onclick="cation3_step2_Ba()">⚗️ Tủa xuất hiện rồi tan → Nhóm III</button>
+  <button onclick="cationGroup4_2()">⚠️ Tủa bền → Nhóm IV/V</button>
+  <button onclick="cationGroup6()">❌ Không tủa → Sang nhóm VI</button>`;
+}
+
+function cation3_step2_Ba(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-Ba — Bước 2</h2>
+  <p class="note">Chia dd ra 2 ống nghiệm, thêm nhiều NH₄Cl bão hòa vào 1 ống:</p>
+<p class="note">So sánh độ đục của 2 ống</p>
+  <button onclick="recordCation('Al3+');showFinalSummary()">💧 Ống có thêm NH₄Cl đục hơn → Al³⁺</button>
+  <button onclick="recordCation('Zn2+');showFinalSummary()">⚗️ 2 ống gần như nhau → Zn²⁺</button>`;
+}
+
+/* === Nhóm III-Ca === */
+function cationGroup3_Ca(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-Ca</h2>
+  <p class="note">Lấy dd gốc thêm nhiều H₂SO₄ 2N và nhiều cồn 90°, li tâm bỏ tủa, lấy phần dd trong (nửa đốt ngón tay)</p>
+<p class="note">Thêm tiếp vài giọi H₂SO₄ 2N và cồn 90° để thử lại xem còn tủa không</p>
+<p class="note">Nếu đã hết tủa thì thêm từ từ NaOH đến 1/3 ống và quan sát:</p>
+  <button onclick="cation3_step2_Ca()">⚗️ Tủa xuất hiện rồi tan → Nhóm III</button>
+  <button onclick="cationGroup4_2()">⚠️ Tủa bền → Nhóm IV/V</button>
+  <button onclick="cationGroup6()">❌ Không tủa → Sang nhóm VI</button>`;
+}
+
+function cation3_step2_Ca(){
+  cationArea.innerHTML=`
+  <h2>Nhóm III-Ca — Bước 2</h2>
+  <p class="note">Chia dd ra 2 ống nghiệm, thêm nhiều NH₄Cl bão hòa vào 1 ống:</p>
+<p class="note">So sánh độ đục của 2 ống</p>
+  <button onclick="recordCation('Al3+');showFinalSummary()">💧 Ống có thêm NH₄Cl đục hơn → Al³⁺</button>
+  <button onclick="recordCation('Zn2+');showFinalSummary()">⚗️ 2 ống gần như nhau → Zn²⁺</button>`;
+}
+
+/* === Nhóm IV/V === */
+function cationGroup4_0(){
+  cationArea.innerHTML=`
+  <h2>Nhóm IV/V-0 (Mg²⁺, Bi³⁺, Hg²⁺)</h2>
+  <p class="note">Lấy rất ít dd gốc thêm từ từ KI đến dư:</p>
+  <button onclick="recordCation('Bi3+');cationGroup6()">🖤 Tủa Đen → cam → Bi³⁺</button>
+  <button onclick="recordCation('Hg2+');cationGroup6()">🧡 Tủa Đỏ cam → mất màu → Hg²⁺</button>
+  <button onclick="recordCation('Mg2+');cationGroup6()">⚗️ Không có 2 hiện tượng như trên → Mg²⁺</button>`;
+}
+
+function cationGroup4_1(){
+  cationArea.innerHTML=`
+  <h2>Nhóm IV/V-1</h2>
+  <p class="note">Lấy rất ít dd gốc thêm từ từ KI đến dư:</p>
+  <button onclick="recordCation('Bi3+');showFinalSummary()">🖤 Đen → cam → Bi³⁺</button>
+  <button onclick="recordCation('Hg2+');showFinalSummary()">🧡 Đỏ cam rồi mất màu → Hg²⁺</button>
+  <button onclick="recordCation('Mg2+');showFinalSummary()">⚗️ Không hiện tượng → Mg²⁺</button>`;
+}
+
+function cationGroup4_2(){
+  cationArea.innerHTML=`
+  <h2>Nhóm IV/V-2</h2>
+  <p class="note">Lấy rất ít dd gốc thêm từ từ KI đến dư:</p>
+  <button onclick="recordCation('Bi3+');showFinalSummary()">🖤 Đen → cam → Bi³⁺</button>
+  <button onclick="recordCation('Hg2+');showFinalSummary()">🧡 Đỏ cam rồi mất màu → Hg²⁺</button>
+  <button onclick="recordCation('Mg2+');showFinalSummary()">⚗️ Không hiện tượng → Mg²⁺</button>`;
+}
+
+/* === Nhóm VI === */
+function cationGroup6(){
+  cationArea.innerHTML=`
+  <h2>Nhóm VI (K⁺, NH₄⁺)</h2>
+  <p class="note">Thêm NaOH và Na₂CO₃ dư vào dung dịch gốc, đậy giấy tẩm phenolphtalein rồi đun:</p>
+  <button onclick="recordCation('NH4+');showFinalSummary()">🌸 Giấy chuyển hồng → NH₄⁺</button>
+  <button onclick="recordCation('K+');showFinalSummary()">💧 Giấy không đổi màu → K⁺</button>`;
+}
+
+/* === Record & Summary === */
+function recordCation(ion){
+
+  // ❗ Giới hạn tổng ion
+  if(getTotalIons() >= MAX_TOTAL_IONS){
+    alert('⚠️ Đã đạt tối đa 3 ion!');
+    return;
+  }
+
+  // 🚨 Kiểm tra tương kỵ
+  const conflict = isIncompatible(ion);
+  if(conflict){
+    alert(`❌ Không thể chọn ${ion} vì phản ứng với ${conflict.anion} tạo kết tủa!`);
+    return;
+  }
+
+  if(!cationResults.includes(ion)) cationResults.push(ion);
+  alert('Xác định: ' + ion);
+  updateSummary();
+}
+
+function showFinalSummary(){
+  updateSummary();
+  const aFound = Object.keys(anionResults)
+  .filter(k => anionResults[k] === true && !k.includes('(detail)'))
+  .map(k => anionResults[k + ' (detail)'] || k)
+  .join(', ') || '—';
+  const cFound=cationResults.join(', ')||'—';
+  alert(`KẾT QUẢ TỔNG HỢP:\n\nAnion: ${aFound}\nCation: ${cFound}`);
+  updateSummary();
+}
+
+/* === Init === */
+renderAnionStart();
+updateSummary();
+</script>
+</body>
+</html>
