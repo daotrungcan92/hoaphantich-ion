@@ -10,12 +10,31 @@ const source = name => fs.readFileSync(path.join(root, name), 'utf8');
 function boot(reduced = false) {
   const { window, document } = parseHTML(source('index.html'));
   window.HTMLElement.prototype.focus = function () {};
+  const dialog = document.getElementById('reset-dialog');
+  dialog.showModal = () => dialog.setAttribute('open', '');
+  dialog.close = () => { dialog.removeAttribute('open'); dialog.dispatchEvent(new window.Event('close')); };
+  let now = 0, nextTimer = 1;
+  const timers = new Map();
+  class TestDate extends Date { static now() { return now; } }
+  const clock = {
+    advance(milliseconds) {
+      const end = now + milliseconds;
+      for (;;) {
+        const next = [...timers.entries()].filter(([,timer]) => timer.at <= end).sort((a,b) => a[1].at-b[1].at)[0];
+        if (!next) break;
+        now = next[1].at; timers.delete(next[0]); next[1].callback();
+      }
+      now = end;
+    },
+  };
   const media = { matches: reduced, addEventListener() {} };
-  const context = vm.createContext({ window, document, matchMedia: () => media, structuredClone, setTimeout: () => 1, clearTimeout() {} });
+  const context = vm.createContext({ window, document, Date: TestDate, matchMedia: () => media, structuredClone,
+    setTimeout: (callback, delay) => { const id = nextTimer++; timers.set(id, {callback, at: now + delay}); return id; },
+    clearTimeout: id => timers.delete(id) });
   for (const file of ['reactions.js', 'scenes.js', 'app.js']) vm.runInContext(source(file), context, { filename: file });
   const choices = () => [...document.querySelectorAll('[data-choice]')];
   const choose = label => {
-    const candidates = choices().filter(button => button.textContent.startsWith(label));
+    const candidates = choices().filter(button => button.querySelector('.choice-label').textContent.startsWith(label));
     assert.equal(candidates.length, 1, `Choice ${label}: ${choices().map(b => b.textContent).join(' | ')}`);
     assert.ok(!candidates[0].hasAttribute('disabled'), `Choice ${label} is disabled`);
     candidates[0].click();
@@ -25,7 +44,7 @@ function boot(reduced = false) {
   const summary = () => document.getElementById('summary').textContent;
   const routeC = () => { choose('Có tủa'); choose('Tủa không tan'); };
   const cations = () => { choose('SCN⁻'); choose('Không có đỏ máu'); click('cation-tab'); choose('Bắt đầu nhóm I'); };
-  return { window, document, choose, choices, click, title, summary, routeC, cations };
+  return { window, document, choose, choices, click, title, summary, routeC, cations, clock };
 }
 
 test('every configured step, operation, outcome and route has a valid visual', () => {
@@ -57,17 +76,73 @@ test('every configured step, operation, outcome and route has a valid visual', (
   assert.ok(models > 140);
 });
 
-test('preview, replay, operations and pause never record an observation', () => {
+test('procedure auto advances and stops at the last operation without recording results', () => {
   const app = boot();
-  app.document.querySelector('[data-preview="1"]').click();
-  assert.ok(app.document.getElementById('simulation').textContent.includes('Chưa ghi nhận kết quả'));
+  const simulation = () => app.document.getElementById('simulation').textContent;
+  assert.ok(simulation().includes('Bước 1/2'));
+  assert.equal(app.document.querySelectorAll('[data-operation], [data-preview]').length, 0);
+  assert.equal(app.document.getElementById('instructions').textContent, '');
+  assert.equal(app.document.querySelectorAll('.phenomenon-image').length, 2);
+  app.clock.advance(11001);
+  assert.ok(simulation().includes('Bước 2/2'));
+  app.clock.advance(11001);
+  assert.ok(simulation().includes('Đã xem hết thao tác'));
+  app.clock.advance(60000);
+  assert.ok(simulation().includes('Bước 2/2'));
+  assert.equal(app.title(), 'Bắt đầu với một giọt AgNO₃');
   assert.equal(app.document.getElementById('history-count').textContent, '0');
   assert.ok(app.document.getElementById('cation-tab').disabled);
-  app.click('replay-scene'); app.click('return-operation');
-  app.document.querySelector('[data-operation="0"]').click();
+  app.click('replay-scene');
+  assert.ok(simulation().includes('Bước 1/2'));
+});
+
+test('pause preserves remaining time; changing screens cancels the old procedure', () => {
+  const app = boot();
+  app.clock.advance(2000);
   app.click('motion-toggle');
   assert.ok(app.document.body.classList.contains('paused'));
+  app.clock.advance(30000);
+  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 1/2'));
+  app.click('motion-toggle'); app.clock.advance(1000);
+  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 1/2'));
+  app.clock.advance(11001);
+  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 2/2'));
   assert.equal(app.document.getElementById('history-count').textContent, '0');
+  app.choose('Có tủa');
+  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 1/3'));
+  app.choose('Tủa không tan'); app.clock.advance(60000);
+  assert.ok(app.document.getElementById('simulation').hidden);
+  assert.ok(app.title().includes('Chọn phép thử'));
+});
+
+test('full procedure is available without animation under reduced motion', () => {
+  const app = boot(true);
+  assert.equal(app.document.querySelectorAll('.static-operation').length, 2);
+  app.clock.advance(60000);
+  assert.equal(app.document.querySelectorAll('.static-operation').length, 2);
+  assert.equal(app.document.getElementById('history-count').textContent, '0');
+});
+
+test('backgrounding the page suspends the procedure until the page is visible', () => {
+  const app = boot();
+  const caption = () => app.document.querySelector('.caption-step').textContent;
+  Object.defineProperty(app.document, 'hidden', { value: true, configurable: true });
+  app.document.dispatchEvent(new app.window.Event('visibilitychange'));
+  app.clock.advance(60000); assert.equal(caption(), 'Bước 1/2');
+  Object.defineProperty(app.document, 'hidden', { value: false, configurable: true });
+  app.document.dispatchEvent(new app.window.Event('visibilitychange'));
+  app.clock.advance(11001); assert.equal(caption(), 'Bước 2/2');
+});
+
+test('reset dialog suspends autoplay and a new sample starts from the first operation', () => {
+  const app = boot();
+  const caption = () => app.document.querySelector('.caption-step').textContent;
+  app.clock.advance(2000); app.click('reset-button'); app.clock.advance(60000);
+  assert.equal(caption(), 'Bước 1/2');
+  app.click('cancel-reset'); app.clock.advance(11001); assert.equal(caption(), 'Bước 2/2');
+  app.click('reset-button'); app.click('confirm-reset'); assert.equal(caption(), 'Bước 1/2');
+  assert.equal(app.document.getElementById('history-count').textContent, '0');
+  assert.ok(!app.document.querySelector('.intro'));
 });
 
 test('oxalate keeps requested label; negative result and back restore state', () => {
@@ -126,10 +201,10 @@ test('three-ion limit completes sample and prevents a fourth ion', () => {
 
 test('halides, chloride multi-stage operations, and negative tests remain navigable', () => {
   const app = boot(); app.routeC();
-  app.choose('Br⁻'); assert.equal(app.document.querySelectorAll('[data-operation]').length, 2); app.choose('Không có màu');
-  app.choose('Cl⁻'); app.choose('Có tủa'); assert.equal(app.document.querySelectorAll('[data-operation]').length, 5);
+  app.choose('Br⁻'); assert.ok(app.document.querySelector('.caption-step').textContent.includes('/2')); app.choose('Không có màu');
+  app.choose('Cl⁻'); app.choose('Có tủa'); assert.ok(app.document.querySelector('.caption-step').textContent.includes('/5'));
   app.choose('Tủa tan rồi xuất hiện lại'); assert.ok(app.summary().includes('Cl⁻'));
-  app.choose('CH₃COO⁻'); assert.equal(app.document.querySelectorAll('[data-operation]').length, 4); app.choose('Không có mùi');
+  app.choose('CH₃COO⁻'); assert.ok(app.document.querySelector('.caption-step').textContent.includes('/4')); app.choose('Không có mùi');
 });
 
 test('all cation subgroups and both comparison branches are reachable', () => {

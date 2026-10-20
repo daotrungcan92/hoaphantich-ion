@@ -82,7 +82,11 @@ window.IonLabScenes = (() => {
       if (type === 'observe') body += `<path d="M292 125q21-24 42 0q-21 24-42 0" fill="#e2efe8" stroke="#90afa0"/><circle cx="313" cy="125" r="6" fill="#5d9383"/>`;
       if (model.reagent && !['add','wash','solid-add','gas','cool'].includes(type)) body += text(240,32,model.reagent,'scene-label');
     }
-    return `<svg class="lab-svg" viewBox="${mini ? '113 -6 254 240' : '0 -6 480 240'}" ${mini ? 'aria-hidden="true"' : `role="img" aria-labelledby="${id}-title"`} xmlns="http://www.w3.org/2000/svg"><title id="${id}-title">${esc(model.label)}</title><defs>${defs.join('')}</defs>${body}</svg>`;
+    const paired = ['compare-cloudy','compare-same','compare-setup','split','clear-or-dissolve','halides','slow-ppt','separate','decant','rack','centrifuge','cool'].includes(type);
+    const fullHeight = ['sample','add','solid-add','wash','heat','cool','cotton','smell','no-smell','paper-setup','paper-pink','paper-clear','observe','bismuth','mercury','reform','centrifuge','split','rack'].includes(type);
+    const miniBox = paired ? (fullHeight ? '130 -6 220 231' : '135 45 210 180') : (fullHeight ? '190 -6 100 225' : '190 48 100 165');
+    const visibleBody = mini && !paired ? body.replace(/<text\b[\s\S]*?<\/text>/g, '') : body;
+    return `<svg class="lab-svg ${paired ? 'paired-scene' : 'single-scene'}" viewBox="${mini ? miniBox : '100 -6 330 240'}" ${mini ? 'aria-hidden="true"' : `role="img" aria-labelledby="${id}-title"`} xmlns="http://www.w3.org/2000/svg"><title id="${id}-title">${esc(model.label)}</title><defs>${defs.join('')}</defs>${visibleBody}</svg>`;
   }
   return { render, esc };
 })();

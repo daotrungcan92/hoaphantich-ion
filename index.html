@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#087f8c">
   <meta name="description" content="Khám phá các phép thử định tính anion và cation bằng mô phỏng động.">
   <title>IonLab · Hóa phân tích trực quan</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="reactions.js" defer></script>
-  <script src="scenes.js" defer></script>
-  <script src="app.js" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261020-mobile2">
+  <script src="reactions.js?v=20261020-mobile2" defer></script>
+  <script src="scenes.js?v=20261020-mobile2" defer></script>
+  <script src="app.js?v=20261020-mobile2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#workspace">Đến bàn thí nghiệm</a>
@@ -18,11 +18,10 @@
     <div class="header-actions"><span class="version-label"><i></i> Phòng thực hành mô phỏng</span><button id="motion-toggle" class="icon-button" type="button" aria-pressed="false">Ⅱ Tạm dừng hoạt ảnh</button></div>
   </header>
   <main>
-    <section class="intro"><div><p class="eyebrow">QUAN SÁT · SO SÁNH · KHÁM PHÁ</p><h1>Để mỗi phản ứng<br><span>trở nên sống động.</span></h1><p>Khám phá anion & cation qua từng giọt thuốc thử,<br class="desktop-break"> sắc màu dung dịch và sự hình thành kết tủa.</p></div><div class="intro-art" aria-hidden="true"><span class="formula f1">Ag⁺</span><span class="formula f2">SO₄²⁻</span><span class="formula f3">NH₄⁺</span><div class="hero-tube t1"><i></i></div><div class="hero-tube t2"><i></i></div><div class="hero-tube t3"><i></i></div><span class="art-caption">Một mẫu thử. Nhiều điều để khám phá.</span></div></section>
     <div class="lab-layout">
       <section id="workspace" class="workspace" aria-label="Bàn thí nghiệm">
         <nav class="phase-tabs" aria-label="Giai đoạn phân tích"><button id="anion-tab" type="button" class="active"><span>01</span> Tìm anion</button><button id="cation-tab" type="button" disabled><span>02</span> Tìm cation <small id="cation-lock">⌑</small></button></nav>
-        <div class="work-content"><div class="step-toolbar"><p id="breadcrumb" class="eyebrow"></p><button id="back-button" class="text-button" type="button">← Bước trước</button></div><h2 id="step-title" tabindex="-1"></h2><div id="instructions"></div><section id="simulation" class="simulation" aria-label="Mô phỏng thao tác và hiện tượng"></section><div id="operation-list" class="operation-list" aria-label="Các thao tác"></div><div class="observation-heading"><div><p class="eyebrow">ĐẾN LƯỢT BẠN QUAN SÁT</p><h3 id="choices-title">Bạn thấy hiện tượng nào?</h3></div><span id="choices-hint">Xem mô phỏng trước khi chọn</span></div><div id="choices" class="choices"></div><p id="step-footnote" class="step-footnote"></p></div>
+        <div class="work-content"><div class="step-toolbar"><p id="breadcrumb" class="eyebrow"></p><button id="back-button" class="text-button" type="button">← Bước trước</button></div><h2 id="step-title" tabindex="-1"></h2><div id="instructions"></div><section id="simulation" class="simulation" aria-label="Mô phỏng thao tác tự động"></section><div class="observation-heading"><h3 id="choices-title">Bạn thấy hiện tượng nào?</h3></div><div id="choices" class="choices"></div><details id="step-notes" class="step-notes"><summary>Ghi chú phép thử</summary><p id="step-footnote"></p></details></div>
       </section>
       <aside class="notebook" aria-label="Sổ tay phân tích"><div class="notebook-heading"><span class="notebook-icon" aria-hidden="true">▤</span><div><p class="eyebrow">MẪU ĐANG PHÂN TÍCH</p><h2>Sổ tay thí nghiệm</h2></div></div><div class="sample-tag"><i></i> Mẫu thử của bạn <span>Tối đa 3 ion</span></div><div id="summary" aria-live="polite" aria-atomic="true"></div><div class="notebook-divider"></div><h3 class="small-heading">Dấu hiệu cần quan sát</h3><div class="legend"><span><i class="legend-dot precip-dot"></i> Kết tủa</span><span><i class="legend-dot color-dot"></i> Đổi màu</span><span><i class="legend-dot gas-dot"></i> Sủi bọt khí</span></div><details class="journal" open><summary>Nhật ký quan sát <span id="history-count">0</span></summary><ol id="journal-list"><li class="empty-journal">Mỗi lựa chọn hiện tượng sẽ được ghi lại ở đây.</li></ol></details><button id="reset-button" class="reset-button" type="button">↻ Bắt đầu mẫu mới</button><p class="notebook-note">Theo sơ đồ bài tập hiện có:<br>tối đa 2 anion, 3 ion tổng cộng.</p></aside>
     </div>

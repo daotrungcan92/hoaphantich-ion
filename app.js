@@ -6,7 +6,9 @@
   const freshState = () => ({ screen: 'start', branch: null, anions: {}, cations: [], journal: [] });
   let state = freshState();
   const history = [];
-  let operation = 0, preview = null, currentStep, toastTimer;
+  let operation = 0, currentStep, toastTimer;
+  let operationTimer = null, nextOperationAt = 0, operationRemaining = null, sequenceComplete = false;
+  let dialogOpen = false;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let paused = reducedMotion.matches;
   let staticMode = reducedMotion.matches;
@@ -98,37 +100,67 @@
   }
   function renderSimulation() {
     const activeOp = currentStep.operations[operation];
-    const activeChoice = preview === null ? null : currentStep.options[preview];
-    const model = activeChoice?.scene || activeOp.scene;
-    $('simulation').innerHTML = `<div class="simulation-top"><span class="live-label"><i></i>${activeChoice ? 'XEM TRƯỚC / HIỆN TƯỢNG MINH HỌA' : 'BÀN THÍ NGHIỆM / MÔ PHỎNG'}</span><div class="simulation-tools"><button type="button" id="replay-scene" aria-label="Phát lại mô phỏng">↻ Phát lại</button>${activeChoice ? '<button type="button" id="return-operation">← Thao tác</button>' : ''}</div></div><div class="stage-visual">${draw(model)}</div><div class="simulation-caption"><span class="caption-number">${activeChoice ? '▷' : String(operation + 1).padStart(2,'0')}</span><div class="caption-text">${esc(activeChoice ? activeChoice.label : activeOp.short)}<small>${esc(activeChoice ? model.label + ' · Chưa ghi nhận kết quả; bấm nút lựa chọn bên dưới để xác nhận.' : activeOp.text)}</small></div></div>`;
-    $('replay-scene').addEventListener('click', () => { if(paused && !staticMode) notify('Hoạt ảnh đang tạm dừng. Bật lại ở góc trên để xem chuyển động.'); renderSimulation(); });
-    $('return-operation')?.addEventListener('click', () => { preview = null; renderSimulation(); });
-    $('operation-list').innerHTML = currentStep.operations.map((item, i) => `<button type="button" data-operation="${i}" class="${preview === null && operation === i ? 'active' : ''}" aria-pressed="${preview === null && operation === i}"><span>${i+1}.</span>${esc(item.short)}</button>`).join('');
-    document.querySelectorAll('[data-operation]').forEach(button => button.addEventListener('click', () => { operation = Number(button.dataset.operation); preview = null; renderSimulation(); }));
-    document.querySelectorAll('.observation-card').forEach((card, index) => card.classList.toggle('previewing', preview === index));
+    const showStage = !currentStep.menu && state.screen !== 'final';
+    $('simulation').hidden = !showStage;
+    if (!showStage) { $('simulation').innerHTML = ''; return; }
+    // Reduced motion shows the full procedure once as a readable, static sequence.
+    if (staticMode) {
+      $('simulation').innerHTML = `<div class="simulation-top"><span class="live-label">THAO TÁC THỰC HÀNH</span></div><div class="static-procedure">${currentStep.operations.map((item, index) => `<div class="static-operation"><div>${draw(item.scene, true)}</div><p><strong>Bước ${index+1}</strong>${esc(item.text)}</p></div>`).join('')}</div>`;
+      return;
+    }
+    const status = paused ? 'Đang tạm dừng' : sequenceComplete ? 'Đã xem hết thao tác' : 'Tự động thực hiện';
+    $('simulation').innerHTML = `<div class="simulation-top"><span class="live-label"><i></i>${status}</span><button type="button" id="replay-scene" aria-label="Phát lại toàn bộ thao tác">↻ Phát lại</button></div><div class="stage-visual">${draw(activeOp.scene)}</div><div class="simulation-caption"><div class="caption-step">Bước ${operation+1}/${currentStep.operations.length}</div><p class="caption-text" aria-live="polite" aria-atomic="true">${esc(activeOp.text)}</p></div><div class="operation-progress" aria-hidden="true">${currentStep.operations.map((_,index)=>`<span class="${index <= operation ? 'reached' : ''}"></span>`).join('')}</div>`;
+    $('replay-scene').addEventListener('click', startSequence);
+  }
+  function stopOperationTimer() {
+    if (operationTimer !== null) clearTimeout(operationTimer);
+    operationTimer = null;
+  }
+  function operationDuration() {
+    // Leave enough time to read each caption; long instructions get a longer scene.
+    return Math.min(11000, Math.max(5000, 2200 + currentStep.operations[operation].text.length * 52));
+  }
+  function scheduleOperation() {
+    stopOperationTimer();
+    if (paused || staticMode || document.hidden || dialogOpen || sequenceComplete || currentStep.menu || state.screen === 'final') return;
+    const delay = operationRemaining ?? operationDuration();
+    nextOperationAt = Date.now() + delay;
+    operationTimer = setTimeout(() => {
+      operationTimer = null; operationRemaining = null;
+      if (operation < currentStep.operations.length - 1) operation++;
+      else sequenceComplete = true;
+      renderSimulation(); scheduleOperation();
+    }, delay);
+  }
+  function suspendSequence() {
+    if (operationTimer !== null) operationRemaining = Math.max(0, nextOperationAt - Date.now());
+    stopOperationTimer();
+  }
+  function startSequence() {
+    stopOperationTimer(); operation = 0; operationRemaining = null; sequenceComplete = false;
+    renderSimulation(); scheduleOperation();
   }
   function render(focus = true) {
     currentStep = state.screen === 'tests' ? testMenu() : state.screen === 'final' ? finalStep() : steps[state.screen];
     if(!currentStep) throw new Error(`Unknown step: ${state.screen}`);
-    operation = state.screen === 'start' ? 1 : 0; preview = null;
+    stopOperationTimer(); operation = 0; operationRemaining = null; sequenceComplete = false;
     $('step-title').textContent = currentStep.title;
     $('breadcrumb').textContent = currentStep.crumb || `${currentStep.phase === 'anion' ? 'ANION' : 'CATION'} / PHÉP THỬ ĐỊNH TÍNH`;
     $('back-button').disabled = !history.length;
     $('back-button').style.visibility = history.length ? 'visible' : 'hidden';
     $('instructions').innerHTML = state.screen === 'final'
       ? `<div class="results-banner"><p><strong>Anion:</strong> ${positiveAnions().map(([ion,result])=>esc(result.detail||ion)).join(', ') || 'Chưa ghi nhận'}</p><p><strong>Cation:</strong> ${state.cations.map(esc).join(', ') || 'Chưa ghi nhận'}</p><small>${total()}/3 ion đã xác định · ${state.journal.length} quan sát trong nhật ký.</small></div>`
-      : currentStep.operations.map((item,i) => `<p><span class="instruction-index">${String(i+1).padStart(2,'0')}.</span>${esc(item.text)}</p>`).join('');
+      : currentStep.menu ? `<p>${esc(currentStep.operations[0].text)}</p>` : '';
+    $('instructions').hidden = !$('instructions').textContent.trim();
     $('choices-title').textContent = currentStep.choicesTitle || 'Bạn thấy hiện tượng nào?';
-    $('choices-hint').textContent = currentStep.menu ? 'Chọn để mở hướng dẫn' : 'Xem mô phỏng trước khi chọn';
     $('step-footnote').textContent = currentStep.footnote || '';
-    $('choices').className = `choices ${currentStep.menu ? 'test-grid' : currentStep.options.length === 3 ? 'three' : ''}`;
-    $('choices').innerHTML = currentStep.options.map((choice, index) => `<article class="observation-card ${currentStep.menu ? 'test-card' : ''} ${choice.disabled ? 'locked' : ''}"><button type="button" class="card-preview" data-preview="${index}" aria-label="Xem mô phỏng: ${esc(choice.label)}" ${choice.disabled ? 'disabled' : ''}>${draw(choice.scene,true)}<span class="preview-tag">▷ ${currentStep.menu ? 'Chuẩn bị' : 'Xem mô phỏng'}</span></button><button type="button" class="choice-select" data-choice="${index}" ${choice.disabled ? 'disabled' : ''}><span>${esc(choice.label)}${choice.hint ? `<small>${esc(choice.hint)}</small>` : ''}</span><span class="choice-arrow" aria-hidden="true">${choice.disabled ? '⌑' : '→'}</span></button></article>`).join('');
+    $('step-notes').hidden = !currentStep.footnote;
+    $('step-notes').removeAttribute('open');
+    const paired = currentStep.options.some(choice => ['compare-cloudy','compare-same','clear-or-dissolve','halides','slow-ppt'].includes(choice.scene.type));
+    $('choices').className = `choices ${currentStep.menu ? 'test-grid' : currentStep.options.length === 3 ? 'three' : ''} ${paired ? 'paired-options' : ''}`;
+    $('choices').innerHTML = currentStep.options.map((choice, index) => `<button type="button" data-choice="${index}" class="observation-card ${currentStep.menu ? 'test-card' : ''}" aria-label="${esc(choice.label)}${choice.hint ? ' — '+esc(choice.hint) : ''}" ${choice.disabled ? 'disabled' : ''}>${currentStep.menu ? '' : `<span class="phenomenon-image">${draw(choice.scene,true)}</span>`}<span class="choice-copy"><span class="choice-label">${esc(choice.label)}</span>${choice.hint ? `<small>${esc(choice.hint)}</small>` : ''}</span><span class="choice-arrow" aria-hidden="true">${choice.disabled ? '⌑' : '→'}</span></button>`).join('');
     document.querySelectorAll('[data-choice]').forEach(button => button.addEventListener('click', () => choose(Number(button.dataset.choice))));
-    document.querySelectorAll('[data-preview]').forEach(button => button.addEventListener('click', () => {
-      preview = Number(button.dataset.preview); renderSimulation();
-      $('simulation').scrollIntoView?.({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block: 'center' });
-    }));
-    updateSummary(); renderSimulation();
+    updateSummary(); renderSimulation(); scheduleOperation();
     if(focus) {
       $('step-title').focus({ preventScroll: true });
       $('workspace').scrollIntoView?.({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block: 'start' });
@@ -139,15 +171,20 @@
     document.body.classList.toggle('still', staticMode);
     $('motion-toggle').setAttribute('aria-pressed', String(paused));
     $('motion-toggle').textContent = paused ? '▷ Bật hoạt ảnh' : 'Ⅱ Tạm dừng hoạt ảnh';
+    renderSimulation();
   }
-  $('motion-toggle').addEventListener('click', () => { paused = !paused; staticMode = false; updateMotion(); });
-  reducedMotion.addEventListener('change', event => { paused = staticMode = event.matches; updateMotion(); });
-  document.addEventListener('visibilitychange', () => { document.body.classList.toggle('page-hidden', document.hidden); });
+  $('motion-toggle').addEventListener('click', () => { suspendSequence(); paused = !paused; staticMode = false; updateMotion(); scheduleOperation(); });
+  reducedMotion.addEventListener('change', event => { suspendSequence(); paused = staticMode = event.matches; updateMotion(); scheduleOperation(); });
+  document.addEventListener('visibilitychange', () => {
+    document.body.classList.toggle('page-hidden', document.hidden);
+    if (document.hidden) suspendSequence(); else scheduleOperation();
+  });
   $('back-button').addEventListener('click', () => { if(history.length) { state = history.pop(); render(); notify('Đã trở lại bước trước; kết quả và nhật ký cũng được khôi phục.'); } });
   $('anion-tab').addEventListener('click', () => go(state.branch ? 'tests' : 'start'));
   $('cation-tab').addEventListener('click', () => { if(Object.keys(state.anions).length) go('cation-start'); });
-  $('reset-button').addEventListener('click', () => $('reset-dialog').showModal());
+  $('reset-button').addEventListener('click', () => { suspendSequence(); dialogOpen = true; $('reset-dialog').showModal(); });
+  $('reset-dialog').addEventListener('close', () => { dialogOpen = false; scheduleOperation(); });
   $('cancel-reset').addEventListener('click', () => $('reset-dialog').close());
-  $('confirm-reset').addEventListener('click', () => { state = freshState(); history.length = 0; $('reset-dialog').close(); render(); notify('Đã chuẩn bị mẫu mới.'); });
+  $('confirm-reset').addEventListener('click', () => { state = freshState(); history.length = 0; dialogOpen = false; $('reset-dialog').close(); render(); notify('Đã chuẩn bị mẫu mới.'); });
   render(false); updateMotion();
 })();

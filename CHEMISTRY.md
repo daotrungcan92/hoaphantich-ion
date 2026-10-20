@@ -17,7 +17,7 @@ Nút âm tính của phép thử oxalat được giữ đúng yêu cầu: **Khô
 - Br⁻ / I⁻: hai ống minh họa hai khả năng khác nhau; màu vàng cam của Br₂ hoặc tím của I₂ nằm ở lớp cloroform phía dưới.
 - Mùi là tín hiệu không nhìn thấy. Nét đứt chỉ là ký hiệu mùi, không phải khói có màu. Phép acetate với ethanol tạo ethyl acetate: sửa tên “dầu chuối” của bản gốc thành “mùi este”.
 - Màu cam của Griess và tím xim của Monterqui giữ theo bài học gốc. Thuốc thử Griess có thể cho sắc độ khác theo thành phần. Bản gốc không có công thức thuốc thử Monterqui, nên không tự dựng thêm dụng cụ hay thứ tự hóa chất chưa được cung cấp.
-- Các thao tác không xác định kết quả tự động. Hình xem trước là một khả năng; chỉ nút chọn hiện tượng mới ghi kết quả.
+- Các thao tác được tự động trình bày theo thứ tự, không xác định kết quả tự động. Hình trên mỗi thẻ là một khả năng; chỉ khi chạm chọn thẻ hiện tượng mới ghi kết quả.
 
 ## Nguồn đối chiếu hình ảnh và hiện tượng
 
