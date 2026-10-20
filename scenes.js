@@ -28,7 +28,8 @@ window.IonLabScenes = (() => {
       if (options.ppt) {
         const cls = options.pptClass || 'precipitate-phase';
         const fill = options.pptColor || '#f6f5e9';
-        const grainColor = options.pptColor || '#a4b49a';
+        const grainColor = options.pptColor || '#fffef7';
+        const grainOutline = options.pptColor || '#81917f';
         const pellet = `<path class="ppt-settled" d="M${x-23} ${bottom-6} Q${x-10} ${bottom-9} ${x} ${bottom-6} T${x+24} ${bottom-6} V${bottom+2} H${x-24}Z" fill="${fill}" stroke="${options.pptColor || '#a9b89d'}" stroke-width=".7"/>`;
         if (options.settled) contents += `<g class="settled-precipitate">${pellet}</g>`;
         else {
@@ -36,9 +37,9 @@ window.IonLabScenes = (() => {
           const duration = cls.includes('dissolving') ? 5 : cls.includes('reforming') ? 7 : cls.includes('transient') || cls.includes('bi-solid') ? 6 : cls.includes('slow-precipitate') ? 10 : 7;
           const frontMode = cls.includes('dissolving') ? 'ppt-front-dissolving' : cls.includes('reforming') ? 'ppt-front-reforming' : '';
           defs.push(`<clipPath id="${frontClip}"><rect class="ppt-front ${frontMode}" style="--ppt-duration:${duration}s" x="${x-24}" y="${topLiquid}" width="${width}" height="${liquidDepth}"/></clipPath>`);
-          const grains = Array.from({length:56}, (_, i) => `<circle cx="${x-20+(i*17%41)}" cy="${topLiquid+2+(i*11%(liquidDepth-4))}" r="${.55+(i%4)*.22}" fill="${grainColor}" opacity="${.25+(i%4)*.12}"/>`).join('');
-          const billows = Array.from({length:9}, (_, i) => `<ellipse cx="${x-12+(i*11%25)}" cy="${topLiquid+3+(i*9%(liquidDepth-5))}" rx="${11+i%3*3}" ry="${3+i%3}" fill="${fill}" opacity=".55"/>`).join('');
-          contents += `<g class="ppt-phase ${cls}" style="--ppt-duration:${duration}s" clip-path="url(#${liquidClip})"><g clip-path="url(#${frontClip})"><g class="ppt-suspension"><rect x="${x-24}" y="${topLiquid}" width="${width}" height="${liquidDepth}" fill="${fill}" opacity=".6"/>${billows}<g class="ppt-grains">${grains}</g></g></g><g class="ppt-deposit">${pellet}</g></g>`;
+          const grains = Array.from({length:56}, (_, i) => `<circle cx="${x-20+(i*17%41)}" cy="${topLiquid+2+(i*11%(liquidDepth-4))}" r="${1.05+(i%4)*.26}" fill="${grainColor}" stroke="${grainOutline}" stroke-width=".5" opacity="${.78+(i%4)*.07}"/>`).join('');
+          const billows = Array.from({length:9}, (_, i) => `<ellipse cx="${x-12+(i*11%25)}" cy="${topLiquid+3+(i*9%(liquidDepth-5))}" rx="${11+i%3*3}" ry="${3+i%3}" fill="${fill}" stroke="${options.pptColor || '#b4bead'}" stroke-width=".5" opacity=".85"/>`).join('');
+          contents += `<g class="ppt-phase ${cls}" style="--ppt-duration:${duration}s" clip-path="url(#${liquidClip})"><g clip-path="url(#${frontClip})"><g class="ppt-suspension"><rect x="${x-24}" y="${topLiquid}" width="${width}" height="${liquidDepth}" fill="${fill}" opacity=".96"/>${billows}<g class="ppt-grains">${grains}</g></g></g><g class="ppt-deposit">${pellet}</g></g>`;
         }
       }
       contents += `<ellipse class="liquid-surface" cx="${x}" cy="${topLiquid}" rx="24" ry="2.8" fill="none" stroke="#adc9bc" stroke-width=".8"/>`;

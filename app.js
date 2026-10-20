@@ -120,7 +120,7 @@
     $('step-notes').removeAttribute('open');
     const paired = currentStep.options.some(choice => ['compare-cloudy','compare-same','clear-or-dissolve','halides','slow-ppt'].includes(choice.scene.type));
     $('choices').className = `choices ${currentStep.menu ? 'test-grid' : currentStep.options.length === 3 ? 'three' : ''} ${paired ? 'paired-options' : ''}`;
-    $('choices').innerHTML = currentStep.options.map((choice, index) => `<button type="button" data-choice="${index}" class="observation-card ${currentStep.menu ? 'test-card' : ''}" aria-label="${esc(choice.label)}${choice.hint ? ' — '+esc(choice.hint) : ''}" ${choice.disabled ? 'disabled' : ''}>${currentStep.menu ? '' : `<span class="phenomenon-image">${draw(choice.scene,true)}</span>`}<span class="choice-copy"><span class="choice-label">${esc(choice.label)}</span>${choice.hint ? `<small>${esc(choice.hint)}</small>` : ''}</span><span class="choice-arrow" aria-hidden="true">${choice.disabled ? '⌑' : '→'}</span></button>`).join('');
+    $('choices').innerHTML = currentStep.options.map((choice, index) => `<button type="button" data-choice="${index}" class="observation-card ${currentStep.menu ? 'test-card' : ''}" aria-label="${esc(choice.label)}${choice.hint ? ' — '+esc(choice.hint) : ''}" ${choice.disabled ? 'disabled' : ''}>${currentStep.menu ? '' : `<span class="phenomenon-image">${draw(choice.scene,true)}</span>`}<span class="choice-copy"><span class="choice-label">${esc(choice.label)}</span>${choice.hint ? `<small>${esc(choice.hint)}</small>` : ''}</span></button>`).join('');
     document.querySelectorAll('[data-choice]').forEach(button => button.addEventListener('click', () => choose(Number(button.dataset.choice))));
     updateSummary(); renderSimulation();
     if(focus) {

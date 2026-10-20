@@ -20,4 +20,6 @@ Nhánh phát triển: `codex/phat-trien-giao-dien`. Chỉ cập nhật nhánh tr
 
 Giao diện mở thẳng vào bài thực hành. Toàn bộ thao tác của phép thử luôn hiện đồng thời trong một khung chung, theo đúng thứ tự. Máy tính xếp hình và hướng dẫn thành các cột; điện thoại xếp thành các hàng ngắn với hình bên trái và chữ bên phải. Hoạt ảnh chạy tại chỗ, không có bộ đếm chuyển trang hoặc bộ hẹn giờ thay hướng dẫn. Phát lại chỉ khởi động lại hoạt ảnh; tạm dừng, giảm chuyển động, trang ở nền và hộp mẫu mới vẫn giữ nguyên toàn bộ hướng dẫn. Phông chữ ngoài tải tùy chọn, không chặn giao diện.
 
-Các hiện tượng hiển thị trực tiếp trên thẻ lớn; chạm vào bất kỳ vị trí nào của thẻ sẽ chọn hiện tượng. Bản điện thoại tăng cỡ chữ, ưu tiên hình và nút chọn; các hình hai ống dùng cả chiều ngang màn hình.
+Các hiện tượng hiển thị trực tiếp trên thẻ lớn; chạm vào bất kỳ vị trí nào của thẻ sẽ chọn hiện tượng. Bản điện thoại tăng cỡ chữ, ưu tiên hình và thao tác chọn; các hình hai ống dùng cả chiều ngang màn hình.
+
+Thẻ hiện tượng không có nút mũi tên hoặc nút xem trước riêng; toàn bộ thẻ là vùng chọn. Vẩn đục và hạt tủa có độ tương phản cao để dễ quan sát trên điện thoại.
