@@ -1,0 +1,8 @@
+{
+  "name": "ionlab-qualitative-analysis",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Vietnamese visual qualitative analysis teaching app",
+  "scripts": { "test": "node --test tests/*.test.cjs" },
+  "devDependencies": { "linkedom": "0.18.12" }
+}
