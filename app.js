@@ -2,11 +2,13 @@
 (() => {
   const { steps, branches, testIds, incompatible, scene, op, option } = window.IonLabData;
   const { render: draw, esc } = window.IonLabScenes;
+  const { byStep: explanations, references } = window.IonLabKnowledge;
   const $ = id => document.getElementById(id);
   const freshState = () => ({ screen: 'start', branch: null, anions: {}, cations: [], journal: [] });
   let state = freshState();
   const history = [];
   let currentStep, toastTimer;
+  let explanationTrigger;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let paused = reducedMotion.matches;
   let staticMode = reducedMotion.matches;
@@ -103,6 +105,16 @@
     $('simulation').innerHTML = `<div class="simulation-top"><span class="live-label">Thao tác thực hành</span><button type="button" id="replay-scene" aria-label="Phát lại các hoạt ảnh">↻ Phát lại</button></div><ol class="procedure-board" role="list" aria-label="Thứ tự thao tác" style="--procedure-columns:${Math.min(currentStep.operations.length, 3)}">${currentStep.operations.map((item,index) => `<li class="procedure-step"><div class="procedure-visual"><span class="procedure-number" aria-hidden="true">${index+1}</span>${draw(item.scene,true)}</div><p>${esc(item.text)}</p></li>`).join('')}</ol>`;
     $('replay-scene').addEventListener('click', renderSimulation);
   }
+  function explain(index, trigger) {
+    const knowledge = explanations[state.screen]?.[index];
+    if (!knowledge) return;
+    explanationTrigger = trigger;
+    $('explanation-observation').textContent = knowledge.observation;
+    $('explanation-content').innerHTML = `<section><h3>Bản chất hóa học</h3><p>${esc(knowledge.reason)}</p></section>${knowledge.equations.length ? `<section><h3>Phương trình minh họa</h3><div class="equation-list">${knowledge.equations.map(equation => `<p class="reaction-equation">${esc(equation)}</p>`).join('')}</div></section>` : ''}<section class="knowledge-meaning"><h3>Ý nghĩa nhận biết</h3><p>${esc(knowledge.meaning)}</p></section>${knowledge.note ? `<p class="knowledge-note">${esc(knowledge.note)}</p>` : ''}${knowledge.sources.length ? `<details class="knowledge-sources"><summary>Tài liệu đối chiếu</summary><ul>${knowledge.sources.map(id => `<li><a href="${esc(references[id].url)}" target="_blank" rel="noopener noreferrer">${esc(references[id].title)} ↗</a></li>`).join('')}</ul></details>` : ''}`;
+    document.body.classList.add('dialog-open');
+    $('explanation-dialog').showModal();
+    $('explanation-content').scrollTop = 0;
+  }
   function render(focus = true) {
     currentStep = state.screen === 'tests' ? testMenu() : state.screen === 'final' ? finalStep() : steps[state.screen];
     if(!currentStep) throw new Error(`Unknown step: ${state.screen}`);
@@ -120,8 +132,9 @@
     $('step-notes').removeAttribute('open');
     const paired = currentStep.options.some(choice => ['compare-cloudy','compare-same','clear-or-dissolve','halides','slow-ppt'].includes(choice.scene.type));
     $('choices').className = `choices ${currentStep.menu ? 'test-grid' : currentStep.options.length === 3 ? 'three' : ''} ${paired ? 'paired-options' : ''}`;
-    $('choices').innerHTML = currentStep.options.map((choice, index) => `<button type="button" data-choice="${index}" class="observation-card ${currentStep.menu ? 'test-card' : ''}" aria-label="${esc(choice.label)}${choice.hint ? ' — '+esc(choice.hint) : ''}" ${choice.disabled ? 'disabled' : ''}>${currentStep.menu ? '' : `<span class="phenomenon-image">${draw(choice.scene,true)}</span>`}<span class="choice-copy"><span class="choice-label">${esc(choice.label)}</span>${choice.hint ? `<small>${esc(choice.hint)}</small>` : ''}</span></button>`).join('');
+    $('choices').innerHTML = currentStep.options.map((choice, index) => `<div class="observation-choice"><button type="button" data-choice="${index}" class="observation-card ${currentStep.menu ? 'test-card' : ''}" aria-label="${esc(choice.label)}${choice.hint ? ' — '+esc(choice.hint) : ''}" ${choice.disabled ? 'disabled' : ''}>${currentStep.menu ? '' : `<span class="phenomenon-image">${draw(choice.scene,true)}</span>`}<span class="choice-copy"><span class="choice-label">${esc(choice.label)}</span>${choice.hint ? `<small>${esc(choice.hint)}</small>` : ''}</span></button>${explanations[state.screen]?.[index] ? `<button type="button" class="explanation-button" data-explain="${index}" aria-label="Giải thích hiện tượng: ${esc(choice.label)}" title="Giải thích hiện tượng" aria-haspopup="dialog" aria-controls="explanation-dialog"><span aria-hidden="true">!</span></button>` : ''}</div>`).join('');
     document.querySelectorAll('[data-choice]').forEach(button => button.addEventListener('click', () => choose(Number(button.dataset.choice))));
+    document.querySelectorAll('[data-explain]').forEach(button => button.addEventListener('click', () => explain(Number(button.dataset.explain), button)));
     updateSummary(); renderSimulation();
     if(focus) {
       $('step-title').focus({ preventScroll: true });
@@ -145,6 +158,18 @@
   $('cation-tab').addEventListener('click', () => { if(Object.keys(state.anions).length) go('cation-start'); });
   $('reset-button').addEventListener('click', () => { document.body.classList.add('dialog-open'); $('reset-dialog').showModal(); });
   $('reset-dialog').addEventListener('close', () => document.body.classList.remove('dialog-open'));
+  $('close-explanation').addEventListener('click', () => $('explanation-dialog').close());
+  $('explanation-dialog').addEventListener('click', event => {
+    // Only a true backdrop click dismisses; whitespace inside the sheet is inert.
+    if (event.target !== $('explanation-dialog')) return;
+    const bounds = event.target.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.target.close();
+  });
+  $('explanation-dialog').addEventListener('close', () => {
+    document.body.classList.remove('dialog-open');
+    if (explanationTrigger?.isConnected) explanationTrigger.focus({ preventScroll: true });
+    explanationTrigger = null;
+  });
   $('cancel-reset').addEventListener('click', () => $('reset-dialog').close());
   $('confirm-reset').addEventListener('click', () => { state = freshState(); history.length = 0; $('reset-dialog').close(); render(); notify('Đã chuẩn bị mẫu mới.'); });
   render(false); updateMotion();

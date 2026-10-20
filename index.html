@@ -7,10 +7,11 @@
   <meta name="description" content="Khám phá các phép thử định tính anion và cation bằng mô phỏng động.">
   <title>IonLab · Hóa phân tích trực quan</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="styles.css?v=20261020-halides8">
-  <script src="reactions.js?v=20261020-halides8" defer></script>
-  <script src="scenes.js?v=20261020-halides8" defer></script>
-  <script src="app.js?v=20261020-halides8" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261020-knowledge10">
+  <script src="reactions.js?v=20261020-knowledge10" defer></script>
+  <script src="explanations.js?v=20261020-knowledge10" defer></script>
+  <script src="scenes.js?v=20261020-knowledge10" defer></script>
+  <script src="app.js?v=20261020-knowledge10" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#workspace">Đến bàn thí nghiệm</a>
@@ -29,6 +30,11 @@
     <footer><span class="brand-mini">⌬ IonLab</span><span>Mô phỏng định tính phục vụ học tập. Màu sắc và thời gian được minh họa, không theo tỉ lệ thực.</span><a href="CHEMISTRY.md" target="_blank" rel="noopener">Ghi chú chuyên môn ↗</a></footer>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="explanation-dialog" class="knowledge-dialog" aria-labelledby="explanation-title" aria-describedby="explanation-observation">
+    <header class="knowledge-header"><div><p class="eyebrow">KIẾN THỨC PHẢN ỨNG</p><h2 id="explanation-title">Giải thích hiện tượng</h2></div><button id="close-explanation" class="knowledge-close" type="button" aria-label="Đóng giải thích" autofocus>×</button></header>
+    <p id="explanation-observation" class="knowledge-observation"></p>
+    <div id="explanation-content" class="knowledge-content"></div>
+  </dialog>
   <dialog id="reset-dialog"><h2>Bắt đầu mẫu mới?</h2><p>Kết quả và nhật ký của mẫu hiện tại sẽ được xóa.</p><div class="dialog-actions"><button id="cancel-reset" type="button">Giữ mẫu hiện tại</button><button id="confirm-reset" type="button" class="primary-button">Bắt đầu mẫu mới</button></div></dialog>
 </body>
 </html>

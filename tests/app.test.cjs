@@ -10,9 +10,10 @@ const source = name => fs.readFileSync(path.join(root, name), 'utf8');
 function boot(reduced = false) {
   const { window, document } = parseHTML(source('index.html'));
   window.HTMLElement.prototype.focus = function () {};
-  const dialog = document.getElementById('reset-dialog');
-  dialog.showModal = () => dialog.setAttribute('open', '');
-  dialog.close = () => { dialog.removeAttribute('open'); dialog.dispatchEvent(new window.Event('close')); };
+  for (const dialog of document.querySelectorAll('dialog')) {
+    dialog.showModal = () => dialog.setAttribute('open', '');
+    dialog.close = () => { dialog.removeAttribute('open'); dialog.dispatchEvent(new window.Event('close')); };
+  }
   let now = 0, nextTimer = 1;
   const timers = new Map();
   class TestDate extends Date { static now() { return now; } }
@@ -31,7 +32,7 @@ function boot(reduced = false) {
   const context = vm.createContext({ window, document, Date: TestDate, matchMedia: () => media, structuredClone,
     setTimeout: (callback, delay) => { const id = nextTimer++; timers.set(id, {callback, at: now + delay}); return id; },
     clearTimeout: id => timers.delete(id) });
-  for (const file of ['reactions.js', 'scenes.js', 'app.js']) vm.runInContext(source(file), context, { filename: file });
+  for (const file of ['reactions.js', 'explanations.js', 'scenes.js', 'app.js']) vm.runInContext(source(file), context, { filename: file });
   const choices = () => [...document.querySelectorAll('[data-choice]')];
   const choose = label => {
     const candidates = choices().filter(button => button.querySelector('.choice-label').textContent.startsWith(label));
@@ -333,4 +334,101 @@ test('reduced motion defaults to a still, legible final state and can be enabled
   assert.ok(app.document.body.classList.contains('still'));
   assert.equal(app.document.getElementById('motion-toggle').textContent, '▷ Bật hoạt ảnh');
   app.click('motion-toggle'); assert.ok(!app.document.body.classList.contains('still'));
+});
+
+test('every observation has specific knowledge; navigation cards do not masquerade as reactions', () => {
+  const app = boot();
+  const { steps } = app.window.IonLabData;
+  const { byStep, references } = app.window.IonLabKnowledge;
+  const navigation = new Set(['cation-start', 'cg3-separate', 'after-al', 'after-zn']);
+  let outcomes = 0;
+  for (const [id, step] of Object.entries(steps)) {
+    if (navigation.has(id)) { assert.equal(byStep[id], undefined); continue; }
+    assert.equal(byStep[id]?.length, step.options.length, `${id}: missing knowledge`);
+    for (const entry of byStep[id]) {
+      outcomes++;
+      assert.ok(entry.observation.length > 8, id);
+      assert.ok(entry.reason.length > 40, id);
+      assert.ok(entry.meaning.length > 30, id);
+      assert.ok(Array.isArray(entry.equations));
+      assert.ok(entry.sources.length || id === 'zn-monterqui', `${id}: no reference`);
+      for (const source of entry.sources) {
+        assert.ok(references[source]?.title, `${id}: unknown reference ${source}`);
+        assert.equal(new URL(references[source].url).protocol, 'https:');
+      }
+    }
+  }
+  assert.equal(Object.keys(byStep).length, 35);
+  assert.ok(outcomes >= 75);
+  assert.ok(byStep.cg6[1].meaning.includes('không phải phép thử khẳng định K⁺'));
+  assert.ok(byStep['cg4-0'][2].meaning.includes('không phải phép thử khẳng định Mg²⁺'));
+  assert.ok(byStep['zn-monterqui'][0].equations.length === 0);
+});
+
+test('! controls are independent buttons and reading knowledge changes no results or history', () => {
+  const routes = [
+    [], ['Có tủa'], ['Không có tủa','NO₂⁻'],
+    ['Không có tủa','NO₂⁻','Không màu','NO₃⁻'],
+    ['Có tủa','Tủa không tan','Br⁻'],
+    ['Có tủa','Tủa không tan','C₂O₄²⁻'],
+    ['Có tủa','Tủa không tan','Cl⁻','Có tủa'],
+    ['Không có tủa','CH₃COO⁻','Không có mùi','@cation-tab','Bắt đầu nhóm I','Có tủa'],
+    ['Không có tủa','CH₃COO⁻','Không có mùi','@cation-tab','Bắt đầu nhóm I','Không tủa','Không tủa hoặc','Không tủa →','Tủa bền','Xét tủa'],
+    ['Không có tủa','CH₃COO⁻','Không có mùi','@cation-tab','Bắt đầu nhóm I','Không tủa','Không tủa hoặc','Không tủa →','Không tủa'],
+  ];
+  for (const route of routes) {
+    const app = boot();
+    for (const label of route) label.startsWith('@') ? app.click(label.slice(1)) : app.choose(label);
+    const snapshot = () => JSON.stringify({ title: app.title(), summary: app.summary(), journal: app.document.getElementById('journal-list').innerHTML, back: app.document.getElementById('back-button').disabled, procedure: app.document.getElementById('simulation').innerHTML });
+    const before = snapshot();
+    const buttons = [...app.document.querySelectorAll('[data-explain]')];
+    assert.equal(buttons.length, app.choices().length, app.title());
+    for (const button of buttons) {
+      assert.equal(button.textContent, '!');
+      assert.equal(button.closest('[data-choice]'), null, 'nested button triggers selection');
+      assert.equal(button.getAttribute('aria-haspopup'), 'dialog');
+      button.click();
+      assert.ok(app.document.getElementById('explanation-dialog').hasAttribute('open'));
+      assert.ok(app.document.body.classList.contains('dialog-open'));
+      assert.ok(app.document.getElementById('explanation-content').textContent.includes('Bản chất hóa học'));
+      assert.equal(snapshot(), before, 'reading must not record an observation or navigate');
+      app.click('close-explanation');
+      assert.ok(!app.document.getElementById('explanation-dialog').hasAttribute('open'));
+      assert.ok(!app.document.body.classList.contains('dialog-open'));
+      assert.equal(snapshot(), before);
+    }
+  }
+});
+
+test('reading a halide explanation then selecting preserves the normal outcome and undo', () => {
+  const app=boot(); app.routeC(); app.choose('Br⁻');
+  const before=app.document.getElementById('history-count').textContent;
+  app.document.querySelector('[data-explain="1"]').click();
+  assert.ok(app.document.getElementById('explanation-observation').textContent.includes('màu tím'));
+  assert.ok(app.document.getElementById('explanation-content').textContent.includes('ClO⁻ + 2I⁻ + 2H⁺ → I₂ + Cl⁻ + H₂O'));
+  app.click('close-explanation'); app.choose('Tím →');
+  assert.ok(app.summary().includes('I⁻'));
+  assert.equal(Number(app.document.getElementById('history-count').textContent),Number(before)+1);
+  assert.equal(app.document.querySelectorAll('[data-explain]').length,0,'menu is navigation only');
+  app.click('back-button');
+  assert.ok(app.title().includes('Br⁻ / I⁻'));
+  assert.equal(app.document.getElementById('history-count').textContent,before);
+  assert.ok(!app.summary().includes('I⁻'));
+});
+
+test('closing explanations restores the ! focus and preserves paused or reduced-motion preference', () => {
+  for (const reduced of [false,true]) {
+    const app=boot(reduced);
+    if (!reduced) app.click('motion-toggle');
+    const before=app.document.body.className;
+    const button=app.document.querySelector('[data-explain]');
+    let focusOptions;
+    button.focus = options => { focusOptions=options; };
+    button.click();
+    app.clock.advance(60000);
+    app.click('close-explanation');
+    assert.equal(focusOptions?.preventScroll,true);
+    assert.equal(app.document.body.className,before);
+    assert.equal(app.document.getElementById('history-count').textContent,'0');
+  }
 });

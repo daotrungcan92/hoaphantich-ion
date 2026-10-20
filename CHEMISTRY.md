@@ -29,4 +29,19 @@ Nút âm tính của phép thử oxalat được giữ đúng yêu cầu: **Khô
 
 Giảng viên có thể hiệu chỉnh quy trình và màu theo giáo trình đang dùng bằng cách sửa dữ liệu tương ứng trong `reactions.js`.
 
+## Học liệu gắn với hiện tượng
+
+`explanations.js` bổ sung giải thích tùy chọn cho từng kết quả quan sát, bao gồm kết quả âm tính và thử độ tan. Mở dấu ! chỉ đọc học liệu; không tự xác định hoặc ghi nhận ion. Nội dung được tách khỏi điều hướng và không thay đổi quy trình cũ.
+
+- Các phương trình dùng dạng ion rút gọn khi phù hợp. Dấu ↓ chỉ chất rắn kết tủa, ↑ chỉ khí thoát ra. Các ví dụ, sơ đồ cơ chế và mô hình giản lược đều có chú thích; không gán một phương trình duy nhất cho hiện tượng có nhiều nguyên nhân.
+- Griess: phân biệt nitrit tạo màu trực tiếp với nitrat phải khử đến nitrit. Màu phụ thuộc thuốc thử; bản gốc chưa nêu công thức Griess A/B, nên chỉ trình bày sơ đồ diazot hóa–ghép cặp, không tự dựng cấu trúc phẩm màu. [FDA — Nitrite Detection Reagents](https://www.fda.gov/food/laboratory-methods-food/bam-r48-nitrite-detection-reagents), [báo cáo nghiên cứu về khử nitrat bằng Zn](https://ntrl.ntis.gov/NTRL/dashboard/searchResults/titleDetail/AD648942.xhtml).
+- Phân biệt carbonat/hydrocarbonat bằng Mg²⁺ phải dùng mẫu mới và đúng điều kiện nhiệt độ. MgCO₃ trong phương trình là mô hình giản lược; tủa thực tế phụ thuộc điều kiện. [Mustansiriyah University — bài thực hành carbonat/hydrocarbonat](https://uomustansiriyah.edu.iq/media/lectures/3/3_2024_09_24%2110_01_55_PM.pdf).
+- Al/Zn: hydroxid lưỡng tính tan trong kiềm dư; đủ NH₄Cl làm Al(OH)₃ tái kết tủa, còn Zn có thể ở dạng phức ammin tan. “Hai ống giống nhau” chỉ có giá trị trong nhánh đã chuẩn bị đúng, không tự xác nhận Zn cho mọi mẫu. [Prescott & Johnson — giáo trình phản ứng gốc](https://upload.wikimedia.org/wikipedia/commons/9/9f/Qualitative_chemical_analysis%3B_a_guide_in_qualitative_work_with_data_for_analytical_operations_and_laboratory_methods_%28IA_qualitativechemi00presrich%29.pdf), [Colorado Boulder — cân bằng NH₄⁺/NH₃/OH⁻](https://www.colorado.edu/lab/lecture-demo-manual/e770-prep-notes).
+- Phép thử H₂SO₄/cồn và KI âm tính không được mô tả như phép khẳng định Ca độc lập. [Dữ liệu thực nghiệm CaSO₄ trong nước–ethanol](https://www.sciencedirect.com/science/article/pii/S0378381213005700).
+- Br₂/I₂: giải thích phân biệt ion ban đầu với phân tử halogen tạo màu, và nêu ảnh hưởng của chất oxi hóa dư/hỗn hợp halid. [Buffalo State — phép thử anion](https://staff.buffalostate.edu/nazareay/che112/ex7.htm).
+- Bi³⁺: BiI₃ đen tạo phức iodid tan trong KI dư; [WHO Drug Information — định tính bismuth](https://iris.who.int/bitstream/handle/10665/340680/9789240022805-eng.pdf).
+- NH₄⁺: phản ứng giải phóng NH₃ và cân bằng tạo OH⁻ trên giấy ẩm được trình bày riêng; K⁺ được ghi rõ là kết luận loại trừ. [Rutgers — NH₃ và phenolphtalein](https://rutchem.rutgers.edu/cldf-demos/1556-solubility-of-a-gas-in-water-ammonia-fountain).
+
+Nguồn trong từng khung hỗ trợ kiểm tra nguyên lý tương ứng; không mặc nhiên xác nhận mọi liều lượng, phân nhóm hoặc nhánh loại trừ của quy trình gốc. Riêng Monterqui vẫn thiếu công thức thuốc thử nên không đưa phương trình hay khẳng định chất tạo màu. Nội dung học liệu có thể hiệu chỉnh độc lập trong `explanations.js` để khớp giáo trình thực hành của trường.
+
 Khi thử độ tan của tủa đã có (HNO₃, HCl, CH₃COOH, nước/đun), các hình “không tan” hoặc “tủa bền” luôn bắt đầu với tủa hiện sẵn và giữ nguyên. Chỉ cảnh tạo tủa mới có hiệu ứng lan đục; cảnh tủa tan và tái kết tủa vẫn thể hiện sự biến mất và xuất hiện đúng giai đoạn.
