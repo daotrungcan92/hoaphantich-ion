@@ -76,71 +76,68 @@ test('every configured step, operation, outcome and route has a valid visual', (
   assert.ok(models > 140);
 });
 
-test('procedure auto advances and stops at the last operation without recording results', () => {
+test('all instructions stay visible together in one frame without page counters', () => {
   const app = boot();
-  const simulation = () => app.document.getElementById('simulation').textContent;
-  assert.ok(simulation().includes('Bước 1/2'));
-  assert.equal(app.document.querySelectorAll('[data-operation], [data-preview]').length, 0);
+  const rows = () => [...app.document.querySelectorAll('.procedure-step')];
+  assert.equal(rows().length, 2);
+  assert.ok(rows()[0].textContent.includes('Lấy một phần dung dịch gốc'));
+  assert.ok(rows()[1].textContent.includes('Thêm từng giọt AgNO₃'));
+  assert.equal(app.document.querySelectorAll('.procedure-board').length, 1);
+  assert.equal(app.document.querySelectorAll('.caption-step,[data-operation],[data-preview]').length, 0);
   assert.equal(app.document.getElementById('instructions').textContent, '');
-  assert.equal(app.document.querySelectorAll('.phenomenon-image').length, 2);
-  app.clock.advance(11001);
-  assert.ok(simulation().includes('Bước 2/2'));
-  app.clock.advance(11001);
-  assert.ok(simulation().includes('Đã xem hết thao tác'));
+  const content = app.document.getElementById('simulation').textContent;
   app.clock.advance(60000);
-  assert.ok(simulation().includes('Bước 2/2'));
-  assert.equal(app.title(), 'Bắt đầu với một giọt AgNO₃');
+  assert.equal(app.document.getElementById('simulation').textContent, content);
   assert.equal(app.document.getElementById('history-count').textContent, '0');
   assert.ok(app.document.getElementById('cation-tab').disabled);
-  app.click('replay-scene');
-  assert.ok(simulation().includes('Bước 1/2'));
-});
-
-test('pause preserves remaining time; changing screens cancels the old procedure', () => {
-  const app = boot();
-  app.clock.advance(2000);
-  app.click('motion-toggle');
-  assert.ok(app.document.body.classList.contains('paused'));
-  app.clock.advance(30000);
-  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 1/2'));
-  app.click('motion-toggle'); app.clock.advance(1000);
-  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 1/2'));
-  app.clock.advance(11001);
-  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 2/2'));
-  assert.equal(app.document.getElementById('history-count').textContent, '0');
   app.choose('Có tủa');
-  assert.ok(app.document.getElementById('simulation').textContent.includes('Bước 1/3'));
-  app.choose('Tủa không tan'); app.clock.advance(60000);
-  assert.ok(app.document.getElementById('simulation').hidden);
-  assert.ok(app.title().includes('Chọn phép thử'));
+  assert.equal(rows().length, 3);
+  assert.ok(rows()[0].textContent.includes('Ly tâm'));
+  assert.ok(rows()[1].textContent.includes('giữ lại phần tủa'));
+  assert.ok(rows()[2].textContent.includes('HNO₃'));
 });
 
-test('full procedure is available without animation under reduced motion', () => {
-  const app = boot(true);
-  assert.equal(app.document.querySelectorAll('.static-operation').length, 2);
+test('replay and pause preserve every instruction and do not record an observation', () => {
+  const app = boot(); app.choose('Có tủa');
+  const journal = app.document.getElementById('history-count').textContent;
+  const captions = () => [...app.document.querySelectorAll('.procedure-step p')].map(p => p.textContent);
+  const before = captions();
+  app.click('replay-scene'); assert.deepEqual(captions(), before);
+  app.click('motion-toggle'); assert.ok(app.document.body.classList.contains('paused'));
+  app.clock.advance(60000); assert.deepEqual(captions(), before);
+  app.click('motion-toggle'); assert.ok(!app.document.body.classList.contains('paused'));
+  assert.equal(app.document.getElementById('history-count').textContent, journal);
+});
+
+test('reduced motion uses the same complete, static procedure layout', () => {
+  const app = boot(true); app.choose('Có tủa');
+  assert.ok(app.document.body.classList.contains('still'));
+  assert.equal(app.document.querySelectorAll('.procedure-step').length, 3);
   app.clock.advance(60000);
-  assert.equal(app.document.querySelectorAll('.static-operation').length, 2);
-  assert.equal(app.document.getElementById('history-count').textContent, '0');
+  assert.equal(app.document.querySelectorAll('.procedure-step').length, 3);
+  assert.equal(app.document.getElementById('history-count').textContent, '1');
 });
 
-test('backgrounding the page suspends the procedure until the page is visible', () => {
+test('backgrounding pauses the illustrations without replacing the instructions', () => {
   const app = boot();
-  const caption = () => app.document.querySelector('.caption-step').textContent;
+  const before = app.document.getElementById('simulation').innerHTML;
   Object.defineProperty(app.document, 'hidden', { value: true, configurable: true });
   app.document.dispatchEvent(new app.window.Event('visibilitychange'));
-  app.clock.advance(60000); assert.equal(caption(), 'Bước 1/2');
+  assert.ok(app.document.body.classList.contains('page-hidden'));
+  app.clock.advance(60000);
+  assert.equal(app.document.getElementById('simulation').innerHTML, before);
   Object.defineProperty(app.document, 'hidden', { value: false, configurable: true });
   app.document.dispatchEvent(new app.window.Event('visibilitychange'));
-  app.clock.advance(11001); assert.equal(caption(), 'Bước 2/2');
+  assert.ok(!app.document.body.classList.contains('page-hidden'));
 });
 
-test('reset dialog suspends autoplay and a new sample starts from the first operation', () => {
-  const app = boot();
-  const caption = () => app.document.querySelector('.caption-step').textContent;
-  app.clock.advance(2000); app.click('reset-button'); app.clock.advance(60000);
-  assert.equal(caption(), 'Bước 1/2');
-  app.click('cancel-reset'); app.clock.advance(11001); assert.equal(caption(), 'Bước 2/2');
-  app.click('reset-button'); app.click('confirm-reset'); assert.equal(caption(), 'Bước 1/2');
+test('reset dialog pauses illustrations and new sample restores its complete procedure', () => {
+  const app = boot(); app.choose('Có tủa');
+  app.click('reset-button'); assert.ok(app.document.body.classList.contains('dialog-open'));
+  app.click('cancel-reset'); assert.ok(!app.document.body.classList.contains('dialog-open'));
+  assert.equal(app.document.querySelectorAll('.procedure-step').length, 3);
+  app.click('reset-button'); app.click('confirm-reset');
+  assert.equal(app.document.querySelectorAll('.procedure-step').length, 2);
   assert.equal(app.document.getElementById('history-count').textContent, '0');
   assert.ok(!app.document.querySelector('.intro'));
 });
@@ -201,10 +198,10 @@ test('three-ion limit completes sample and prevents a fourth ion', () => {
 
 test('halides, chloride multi-stage operations, and negative tests remain navigable', () => {
   const app = boot(); app.routeC();
-  app.choose('Br⁻'); assert.ok(app.document.querySelector('.caption-step').textContent.includes('/2')); app.choose('Không có màu');
-  app.choose('Cl⁻'); app.choose('Có tủa'); assert.ok(app.document.querySelector('.caption-step').textContent.includes('/5'));
+  app.choose('Br⁻'); assert.equal(app.document.querySelectorAll('.procedure-step').length, 2); app.choose('Không có màu');
+  app.choose('Cl⁻'); app.choose('Có tủa'); assert.equal(app.document.querySelectorAll('.procedure-step').length, 5);
   app.choose('Tủa tan rồi xuất hiện lại'); assert.ok(app.summary().includes('Cl⁻'));
-  app.choose('CH₃COO⁻'); assert.ok(app.document.querySelector('.caption-step').textContent.includes('/4')); app.choose('Không có mùi');
+  app.choose('CH₃COO⁻'); assert.equal(app.document.querySelectorAll('.procedure-step').length, 4); app.choose('Không có mùi');
 });
 
 test('all cation subgroups and both comparison branches are reachable', () => {
