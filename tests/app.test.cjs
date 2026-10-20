@@ -76,6 +76,50 @@ test('every configured step, operation, outcome and route has a valid visual', (
   assert.ok(models > 140);
 });
 
+test('liquid depth is halved consistently across single, paired and colored tubes', () => {
+  const app = boot();
+  for (const type of ['clear','precipitate','color','compare-cloudy','halides','layers','dissolve','mercury','bismuth','gas','decant']) {
+    const doc = new DOMParser().parseFromString(app.window.IonLabScenes.render({type, label:type, color:'#b32337'}), 'image/svg+xml');
+    const liquids = [...doc.querySelectorAll('.liquid-base')];
+    assert.ok(liquids.length, type);
+    for (const liquid of liquids) assert.equal(Number(liquid.getAttribute('height')), 71 / 2, type);
+    for (const colored of doc.querySelectorAll('.fluid-color,.bi-solution')) assert.equal(Number(colored.getAttribute('height')), 35.5, type);
+  }
+});
+
+test('new precipitate is suspended through the entire liquid and shares its clipping boundary', () => {
+  const app = boot();
+  for (const type of ['precipitate','dissolve','transient','reform','bismuth','mercury']) {
+    const doc = new DOMParser().parseFromString(app.window.IonLabScenes.render({type, label:type}), 'image/svg+xml');
+    const liquid = doc.querySelector('.liquid-base');
+    const top = Number(liquid.getAttribute('y'));
+    const depth = Number(liquid.getAttribute('height'));
+    const front = doc.querySelector('.ppt-front');
+    assert.equal(Number(front.getAttribute('y')), top, type);
+    assert.equal(Number(front.getAttribute('height')), depth, type);
+    const suspension = doc.querySelector('.ppt-suspension');
+    assert.ok(suspension, type);
+    const ys = [...suspension.querySelectorAll('circle')].map(circle=>Number(circle.getAttribute('cy')));
+    assert.ok(Math.min(...ys) >= top && Math.min(...ys) < top + depth/4, type);
+    assert.ok(Math.max(...ys) <= top + depth && Math.max(...ys) > top + depth*3/4, type);
+    assert.ok(doc.querySelector('.ppt-phase').getAttribute('clip-path').includes('-liquid'), type);
+  }
+});
+
+test('clear tubes have no suspension; separated precipitate remains settled', () => {
+  const app = boot();
+  const svg = type=>new DOMParser().parseFromString(app.window.IonLabScenes.render({type,label:type}), 'image/svg+xml');
+  assert.equal(svg('clear').querySelectorAll('.ppt-suspension').length, 0);
+  for (const type of ['decant','separate']) {
+    assert.equal(svg(type).querySelectorAll('.settled-precipitate').length, 1);
+    assert.equal(svg(type).querySelectorAll('.ppt-suspension').length, 0);
+  }
+  const bismuth=svg('bismuth');
+  assert.equal(bismuth.querySelector('.bi-solution').getAttribute('fill'),'#e99a38');
+  assert.ok([...bismuth.querySelectorAll('.ppt-grains circle')].every(circle=>circle.getAttribute('fill')==='#343239'));
+  assert.ok([...svg('mercury').querySelectorAll('.ppt-grains circle')].every(circle=>circle.getAttribute('fill')==='#ea542c'));
+});
+
 test('all instructions stay visible together in one frame without page counters', () => {
   const app = boot();
   const rows = () => [...app.document.querySelectorAll('.procedure-step')];

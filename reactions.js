@@ -4,7 +4,7 @@ window.IonLabData = (() => {
   const scene = (type, label, reagent = '', extra = {}) => ({ type, label, reagent, ...extra });
   const op = (short, text, type = 'add', reagent = '', extra = {}) => ({ short, text, scene: scene(type, short, reagent, extra) });
   const option = (label, visual, next, extra = {}) => ({ label, scene: visual, next, ...extra });
-  const ppt = () => scene('precipitate', 'Kết tủa hình thành và lắng xuống đáy');
+  const ppt = () => scene('precipitate', 'Vẩn đục lan từ trên xuống trong dung dịch, hạt tủa lắng dần');
   const clear = () => scene('clear', 'Không xuất hiện kết tủa');
   const dissolve = () => scene('dissolve', 'Kết tủa tan dần, dung dịch trở lại trong');
   const transient = () => scene('transient', 'Tủa xuất hiện rồi tan khi thêm thuốc thử dư');
