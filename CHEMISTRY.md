@@ -14,7 +14,7 @@ Nút âm tính của phép thử oxalat được giữ đúng yêu cầu: **Khô
 - Mức dung dịch trong mỗi ống bằng một nửa mức minh họa trước đây. Kết tủa mới hình thành được thể hiện bằng mảng vẩn đục loang và bông tủa có mép không đều, không dùng vòng tròn hoặc viền rỗng như bọt khí; các bông tủa lơ lửng lan từ mặt dung dịch xuống toàn bộ phần chất lỏng, sau đó mới lắng nhẹ. Phần tủa đã ly tâm/tách riêng vẫn nằm ở đáy. Cảnh tan làm cả vẩn đục và hạt rắn biến mất. Cảnh Cl⁻ gồm có tủa → tan → tái xuất hiện.
 - Bi³⁺ với KI: **tủa đen**, rồi tủa tan trong KI dư thành **dung dịch cam**. Không biến lớp tủa đen thành lớp tủa cam.
 - Hg²⁺ với KI: tủa đỏ cam xuất hiện rồi tan trong KI dư.
-- Br⁻ / I⁻: hai ống minh họa hai khả năng khác nhau; màu vàng cam của Br₂ hoặc tím của I₂ nằm ở lớp cloroform phía dưới.
+- Br⁻ / I⁻: hai thẻ dương tính riêng biệt, mỗi thẻ minh họa một ống. Lớp cloroform phía dưới vàng cam (Br₂) ghi kết quả Br⁻; lớp này tím (I₂) ghi kết quả I⁻. Thẻ âm tính không có màu đặc trưng. Sổ tay, thông báo và tổng kết chỉ ghi ion đã chọn, không ghi gộp Br⁻ / I⁻.
 - Mùi là tín hiệu không nhìn thấy. Nét đứt chỉ là ký hiệu mùi, không phải khói có màu. Phép acetate với ethanol tạo ethyl acetate: sửa tên “dầu chuối” của bản gốc thành “mùi este”.
 - Màu cam của Griess và tím xim của Monterqui giữ theo bài học gốc. Thuốc thử Griess có thể cho sắc độ khác theo thành phần. Bản gốc không có công thức thuốc thử Monterqui, nên không tự dựng thêm dụng cụ hay thứ tự hóa chất chưa được cung cấp.
 - Toàn bộ thao tác được trình bày đồng thời theo thứ tự trong một khung, không xác định kết quả tự động. Hình trên mỗi thẻ là một khả năng; chỉ khi chạm chọn thẻ hiện tượng mới ghi kết quả.

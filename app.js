@@ -70,7 +70,7 @@
         const locked = name === 'NO₃⁻' && state.anions['NO₂⁻']?.positive !== false;
         return option(name, scene('sample', `Chuẩn bị phép thử ${name}`, name), id, {
           disabled: locked, recordObservation: false,
-          hint: locked ? (state.anions['NO₂⁻']?.positive ? 'Bỏ qua: NO₂⁻ dương tính' : 'Thử NO₂⁻ âm tính trước') : result ? (result.positive ? '✓ Đã ghi nhận dương tính' : '− Đã ghi nhận âm tính') : 'Chưa thực hiện',
+          hint: locked ? (state.anions['NO₂⁻']?.positive ? 'Bỏ qua: NO₂⁻ dương tính' : 'Thử NO₂⁻ âm tính trước') : result ? (result.positive ? `✓ Đã xác định ${result.detail || name}` : '− Đã ghi nhận âm tính') : 'Chưa thực hiện',
         });
       }), option('Chuyển sang tìm cation', scene('rack', 'Tiếp tục các nhóm cation'), 'cation-start', { disabled: !Object.keys(state.anions).length, hint: 'Sau khi hoàn tất các phép thử anion cần thiết', recordObservation: false })],
       footnote: 'Nút NO₃⁻ được mở sau khi NO₂⁻ âm tính. Mẫu của bài tập chứa tối đa 2 anion và tối đa 3 ion tổng cộng.',

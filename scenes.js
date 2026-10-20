@@ -93,7 +93,7 @@ window.IonLabScenes = (() => {
       if (type === 'color' || type === 'tint') { options.color = model.color || '#9b6dbf'; if(type === 'tint') options.colorClass = ''; }
       if (type === 'gas') options.gas = true;
       if (type === 'solid-add') options.solids = true;
-      if (type === 'layers' || model.layers) options.layers = true;
+      if (type === 'layers' || model.layers) { options.layers = true; options.layerColor = model.layerColor; }
       if (type === 'shake') options.shake = true;
       body += tube(240,71,options);
       if (['add','wash','solid-add','sample'].includes(type)) body += dropper(type === 'sample' ? 'Dung dịch gốc' : model.reagent);

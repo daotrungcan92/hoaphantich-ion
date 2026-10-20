@@ -265,6 +265,46 @@ test('three-ion limit completes sample and prevents a fourth ion', () => {
   assert.ok(app.title().includes('Thử độ tan')); assert.ok(!app.summary().includes('Ag⁺'));
 });
 
+test('halide colors identify one specific ion and replace or clear the prior result', () => {
+  const app=boot(); app.routeC(); app.choose('Br⁻');
+  assert.equal(app.choices().length,3);
+  app.choose('Vàng cam →');
+  const found=()=>[...app.document.querySelectorAll('#summary .result-chip')].map(chip=>chip.textContent);
+  assert.deepEqual(found(),['Br⁻']);
+  assert.ok(app.document.getElementById('toast').textContent.startsWith('Br⁻:'));
+  assert.ok(app.choices().find(button=>button.textContent.startsWith('Br⁻ / I⁻')).textContent.includes('Đã xác định Br⁻'));
+  app.choose('Br⁻'); app.choose('Tím →');
+  assert.deepEqual(found(),['I⁻']);
+  assert.ok(app.summary().includes('1 / 3'));
+  app.choose('Br⁻'); app.choose('Không có màu');
+  assert.deepEqual(found(),[]);
+});
+
+test('bromine and iodine color belongs only to the lower organic layer', () => {
+  const app=boot(); const choices=app.window.IonLabData.steps.halides.options;
+  for (const [index,color] of [[0,'#e4a045'],[1,'#8c58b4']]) {
+    const svg=app.window.IonLabScenes.render(choices[index].scene);
+    const doc=new DOMParser().parseFromString(svg,'image/svg+xml');
+    assert.equal(doc.querySelectorAll('.liquid-base').length,1);
+    assert.equal(doc.querySelector('.organic-layer').getAttribute('fill'),color);
+    assert.equal(doc.querySelectorAll('.fluid-color').length,0);
+  }
+});
+
+test('specific halide names appear in final results and retain incompatibility checks', () => {
+  for (const [selection,ion] of [['Vàng cam →','Br⁻'],['Tím →','I⁻']]) {
+    const app=boot(); app.routeC(); app.choose('Br⁻'); app.choose(selection);
+    app.click('cation-tab'); app.choose('Bắt đầu nhóm I'); app.choose('Có tủa'); app.choose('Tủa không tan');
+    assert.ok(app.document.getElementById('toast').textContent.includes(`tương kỵ với ${ion}`));
+    assert.ok(!app.summary().includes('Ag⁺'));
+    app.click('back-button'); app.choose('Không tủa'); app.choose('Có kết tủa ngay');
+    app.choose('Không tủa'); app.choose('Giấy chuyển hồng');
+    assert.equal(app.title(),'Kết quả của mẫu thử');
+    const result=app.document.getElementById('instructions').textContent;
+    assert.ok(result.includes(ion)); assert.ok(!result.includes('Br⁻ / I⁻'));
+  }
+});
+
 test('halides, chloride multi-stage operations, and negative tests remain navigable', () => {
   const app = boot(); app.routeC();
   app.choose('Br⁻'); assert.equal(app.document.querySelectorAll('.procedure-step').length, 2); app.choose('Không có màu');
