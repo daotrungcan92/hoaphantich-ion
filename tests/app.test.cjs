@@ -99,7 +99,8 @@ test('new precipitate is suspended through the entire liquid and shares its clip
     assert.equal(Number(front.getAttribute('height')), depth, type);
     const suspension = doc.querySelector('.ppt-suspension');
     assert.ok(suspension, type);
-    const ys = [...suspension.querySelectorAll('circle')].map(circle=>Number(circle.getAttribute('cy')));
+    assert.equal(suspension.querySelectorAll('circle,ellipse').length, 0, `${type}: precipitate must not resemble gas bubbles`);
+    const ys = [...suspension.querySelectorAll('.ppt-floc')].map(floc=>Number(floc.getAttribute('transform').match(/translate\([^ ]+ ([^)]+)\)/)[1]));
     assert.ok(Math.min(...ys) >= top && Math.min(...ys) < top + depth/4, type);
     assert.ok(Math.max(...ys) <= top + depth && Math.max(...ys) > top + depth*3/4, type);
     assert.ok(doc.querySelector('.ppt-phase').getAttribute('clip-path').includes('-liquid'), type);
@@ -116,8 +117,9 @@ test('clear tubes have no suspension; separated precipitate remains settled', ()
   }
   const bismuth=svg('bismuth');
   assert.equal(bismuth.querySelector('.bi-solution').getAttribute('fill'),'#e99a38');
-  assert.ok([...bismuth.querySelectorAll('.ppt-grains circle')].every(circle=>circle.getAttribute('fill')==='#343239'));
-  assert.ok([...svg('mercury').querySelectorAll('.ppt-grains circle')].every(circle=>circle.getAttribute('fill')==='#ea542c'));
+  assert.ok([...bismuth.querySelectorAll('.ppt-grains .ppt-floc')].every(floc=>floc.getAttribute('fill')==='#343239'));
+  assert.ok([...svg('mercury').querySelectorAll('.ppt-grains .ppt-floc')].every(floc=>floc.getAttribute('fill')==='#ea542c'));
+  assert.equal(svg('gas').querySelectorAll('circle.bubble').length, 3);
 });
 
 test('all instructions stay visible together in one frame without page counters', () => {

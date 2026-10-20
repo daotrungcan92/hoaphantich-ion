@@ -11,7 +11,7 @@ Nút âm tính của phép thử oxalat được giữ đúng yêu cầu: **Khô
 ## Quy ước hình ảnh
 
 - Dung dịch không màu dùng nền kính sáng với đường viền xanh nhạt để nhìn thấy bề mặt; sắc viền không biểu thị dung dịch màu xanh.
-- Mức dung dịch trong mỗi ống bằng một nửa mức minh họa trước đây. Kết tủa mới hình thành được thể hiện bằng vẩn đục và hạt lơ lửng lan từ mặt dung dịch xuống toàn bộ phần chất lỏng, sau đó mới lắng nhẹ. Phần tủa đã ly tâm/tách riêng vẫn nằm ở đáy. Cảnh tan làm cả vẩn đục và hạt rắn biến mất. Cảnh Cl⁻ gồm có tủa → tan → tái xuất hiện.
+- Mức dung dịch trong mỗi ống bằng một nửa mức minh họa trước đây. Kết tủa mới hình thành được thể hiện bằng mảng vẩn đục loang và bông tủa có mép không đều, không dùng vòng tròn hoặc viền rỗng như bọt khí; các bông tủa lơ lửng lan từ mặt dung dịch xuống toàn bộ phần chất lỏng, sau đó mới lắng nhẹ. Phần tủa đã ly tâm/tách riêng vẫn nằm ở đáy. Cảnh tan làm cả vẩn đục và hạt rắn biến mất. Cảnh Cl⁻ gồm có tủa → tan → tái xuất hiện.
 - Bi³⁺ với KI: **tủa đen**, rồi tủa tan trong KI dư thành **dung dịch cam**. Không biến lớp tủa đen thành lớp tủa cam.
 - Hg²⁺ với KI: tủa đỏ cam xuất hiện rồi tan trong KI dư.
 - Br⁻ / I⁻: hai ống minh họa hai khả năng khác nhau; màu vàng cam của Br₂ hoặc tím của I₂ nằm ở lớp cloroform phía dưới.
