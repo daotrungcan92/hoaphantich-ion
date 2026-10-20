@@ -23,3 +23,5 @@ Giao diện mở thẳng vào bài thực hành. Toàn bộ thao tác của phé
 Các hiện tượng hiển thị trực tiếp trên thẻ lớn; chạm vào bất kỳ vị trí nào của thẻ sẽ chọn hiện tượng. Bản điện thoại tăng cỡ chữ, ưu tiên hình và thao tác chọn; các hình hai ống dùng cả chiều ngang màn hình.
 
 Thẻ hiện tượng không có nút mũi tên hoặc nút xem trước riêng; toàn bộ thẻ là vùng chọn. Vẩn đục và hạt tủa có độ tương phản cao để dễ quan sát trên điện thoại.
+
+Các lựa chọn “tủa không tan”/“tủa bền” hiển thị tủa có sẵn và giữ nguyên, không chạy lại hiệu ứng tạo tủa. Cảnh thêm thuốc thử vào phần tủa có sẵn cũng bắt đầu với tủa hiện đầy đủ.

@@ -67,3 +67,8 @@ footer{display:flex;align-items:center;gap:20px;margin:26px 0 0;padding:18px 0 0
 @keyframes ppt-reform-front{0%,20%{transform:scaleY(1)}38%,58%{transform:scaleY(0)}86%,100%{transform:scaleY(1)}}
 @keyframes ppt-drift{0%,10%{transform:translateY(-1px)}75%,100%{transform:translateY(3px)}}
 @keyframes ppt-settle{0%,55%{opacity:0}82%,100%{opacity:.5}}
+
+/* Existing precipitate does not form again while testing its solubility. */
+.lab-svg .ppt-front-existing{animation:none;transform:scaleY(1)}
+.lab-svg .persistent-precipitate .ppt-grains,.lab-svg .persistent-precipitate .ppt-deposit{animation:none}
+.lab-svg .persistent-precipitate .ppt-deposit{opacity:.25}

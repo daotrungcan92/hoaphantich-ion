@@ -43,7 +43,7 @@ window.IonLabScenes = (() => {
         else {
           const frontClip = `${clip}-ppt-front`;
           const duration = cls.includes('dissolving') ? 5 : cls.includes('reforming') ? 7 : cls.includes('transient') || cls.includes('bi-solid') ? 6 : cls.includes('slow-precipitate') ? 10 : 7;
-          const frontMode = cls.includes('dissolving') ? 'ppt-front-dissolving' : cls.includes('reforming') ? 'ppt-front-reforming' : '';
+          const frontMode = cls.includes('persistent-precipitate') ? 'ppt-front-existing' : cls.includes('dissolving') ? 'ppt-front-dissolving' : cls.includes('reforming') ? 'ppt-front-reforming' : '';
           defs.push(`<clipPath id="${frontClip}"><rect class="ppt-front ${frontMode}" style="--ppt-duration:${duration}s" x="${x-24}" y="${topLiquid}" width="${width}" height="${liquidDepth}"/></clipPath>`);
           const grains = Array.from({length:46}, (_, i) => floc(x-20+(i*17%41), topLiquid+2+(i*11%(liquidDepth-4)), 1.3+(i%4)*.35, i, grainColor, .8+(i%3)*.1)).join('');
           const plume = 'M-1.4-.15C-1.15-.7-.5-.35-.25-.75C.05-1 .4-.35 .75-.5C1.5-.55 1.6.1 1.1.35C.7.65.2.2-.15.7C-.55 1-1 .25-1.35.4Z';
@@ -83,7 +83,9 @@ window.IonLabScenes = (() => {
       body += '<rect x="126" y="158" width="228" height="13" rx="5" fill="#a1bca7"/><path d="M136 171v42m208-42v42" stroke="#95b09d" stroke-width="9"/>';
     } else {
       const options = { initial: true };
-      if (['precipitate','wash'].includes(type) || model.initialPpt) options.ppt = true;
+      if (['precipitate','wash','persistent-ppt','settled-ppt'].includes(type) || model.initialPpt) options.ppt = true;
+      if (type === 'persistent-ppt' || type === 'wash' || model.initialPpt) options.pptClass = 'persistent-precipitate';
+      if (type === 'settled-ppt') options.settled = true;
       if (['dissolve','mercury'].includes(type)) { options.ppt = true; options.pptClass = 'dissolving'; if(type === 'mercury') options.pptColor = '#ea542c'; }
       if (type === 'reform') { options.ppt = true; options.pptClass = 'reforming'; }
       if (type === 'transient') { options.ppt = true; options.pptClass = 'transient'; }

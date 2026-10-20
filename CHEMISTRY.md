@@ -28,3 +28,5 @@ Nút âm tính của phép thử oxalat được giữ đúng yêu cầu: **Khô
 - [Tài liệu hóa phân tích định tính — L. Pataki (1980)](https://www.ndl.ethernet.edu.et/bitstream/123456789/7011/1/L.%20Pataki_1980.pdf): BiI₃ đen tan trong iodide dư thành phức màu cam đỏ.
 
 Giảng viên có thể hiệu chỉnh quy trình và màu theo giáo trình đang dùng bằng cách sửa dữ liệu tương ứng trong `reactions.js`.
+
+Khi thử độ tan của tủa đã có (HNO₃, HCl, CH₃COOH, nước/đun), các hình “không tan” hoặc “tủa bền” luôn bắt đầu với tủa hiện sẵn và giữ nguyên. Chỉ cảnh tạo tủa mới có hiệu ứng lan đục; cảnh tủa tan và tái kết tủa vẫn thể hiện sự biến mất và xuất hiện đúng giai đoạn.

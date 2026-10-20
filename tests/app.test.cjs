@@ -122,6 +122,29 @@ test('clear tubes have no suspension; separated precipitate remains settled', ()
   assert.equal(svg('gas').querySelectorAll('circle.bubble').length, 3);
 });
 
+test('insoluble and persistent outcomes show existing precipitate instead of creating it again', () => {
+  const app=boot();
+  const {steps}=app.window.IonLabData;
+  const parse=model=>new DOMParser().parseFromString(app.window.IonLabScenes.render(model), 'image/svg+xml');
+  let checked=0;
+  for (const step of Object.values(steps)) {
+    for (const choice of step.options) {
+      if (!/không tan|Không tan|Tủa bền/.test(choice.label)) continue;
+      checked++;
+      const doc=parse(choice.scene);
+      assert.ok(doc.querySelector('.persistent-precipitate'), choice.label);
+      assert.ok(doc.querySelector('.ppt-front-existing'), choice.label);
+      assert.equal(doc.querySelectorAll('.precipitate-phase,.reforming,.transient').length,0,choice.label);
+    }
+    for (const operation of step.operations.filter(operation=>operation.scene.initialPpt)) {
+      assert.ok(parse(operation.scene).querySelector('.ppt-front-existing'),operation.text);
+    }
+  }
+  assert.ok(checked>=8);
+  assert.equal(parse(steps.start.options[1].scene).querySelectorAll('.ppt-front-existing').length,0);
+  assert.ok(parse(steps['chloride-confirm'].options[0].scene).querySelector('.ppt-front-reforming'));
+});
+
 test('all instructions stay visible together in one frame without page counters', () => {
   const app = boot();
   const rows = () => [...app.document.querySelectorAll('.procedure-step')];
